@@ -1,0 +1,381 @@
+{
+  "agent_name": "BPM Process Manager",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "monitor_process_execution",
+      "description": "Monitor real-time execution of processes across agencies",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_name": {
+            "type": "string",
+            "description": "Process to monitor",
+            "enum": ["month-end-closing", "bir-filing", "bank-reconciliation", "budget-tracking", "inter-agency-transfers", "procurement-processing"]
+          },
+          "agencies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["RIM", "CKVC", "BOM", "AGENCY4", "AGENCY5", "AGENCY6", "AGENCY7", "AGENCY8", "ALL"]
+            },
+            "description": "Agencies to monitor"
+          },
+          "status_filter": {
+            "type": "string",
+            "enum": ["all", "in-progress", "blocked", "completed", "failed"],
+            "description": "Filter by status"
+          }
+        },
+        "required": ["process_name"]
+      },
+      "integration": {
+        "type": "supabase_realtime",
+        "table": "process_execution_log",
+        "subscription": "process_status_changes"
+      }
+    },
+    {
+      "name": "intervene_in_process",
+      "description": "Manually intervene in a running process instance",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_instance_id": {
+            "type": "string",
+            "description": "Unique ID of the process instance"
+          },
+          "intervention_type": {
+            "type": "string",
+            "enum": ["pause", "resume", "skip-step", "retry", "cancel", "override"],
+            "description": "Type of intervention"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Justification for intervention"
+          },
+          "override_data": {
+            "type": "object",
+            "description": "Data to override (if applicable)"
+          }
+        },
+        "required": ["process_instance_id", "intervention_type", "reason"]
+      },
+      "integration": {
+        "type": "odoo_xmlrpc",
+        "model": "process.workflow.instance",
+        "method": "intervene"
+      }
+    },
+    {
+      "name": "coordinate_agencies",
+      "description": "Coordinate cross-agency activities and standardization efforts",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Topic for coordination"
+          },
+          "agencies": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Agencies involved"
+          },
+          "proposal": {
+            "type": "string",
+            "description": "Proposed approach or standard"
+          },
+          "implementation_plan": {
+            "type": "object",
+            "properties": {
+              "phases": {"type": "array", "items": {"type": "string"}},
+              "timeline": {"type": "string"},
+              "resources": {"type": "string"}
+            }
+          }
+        },
+        "required": ["topic", "agencies", "proposal"]
+      },
+      "integration": {
+        "type": "supabase_rpc",
+        "function": "create_coordination_initiative",
+        "notification": "slack_webhook"
+      }
+    },
+    {
+      "name": "request_automation",
+      "description": "Delegate automation task to Automation Developer agent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task_description": {
+            "type": "string",
+            "description": "What to automate"
+          },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "functional": {"type": "string"},
+              "technical": {"type": "string"},
+              "success_criteria": {"type": "string"},
+              "constraints": {"type": "string"}
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Priority level"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "description": "Expected delivery date"
+          }
+        },
+        "required": ["task_description", "requirements", "priority"]
+      },
+      "integration": {
+        "type": "agent_delegation",
+        "target_agent": "bpm-automation-dev",
+        "method": "async_task_queue"
+      }
+    },
+    {
+      "name": "request_analysis",
+      "description": "Delegate process analysis to BPM Analyst agent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_name": {
+            "type": "string",
+            "description": "Process to analyze"
+          },
+          "focus_areas": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["bottlenecks", "automation-opportunities", "error-reduction", "cost-optimization", "compliance-gaps", "root-cause-analysis"]
+            }
+          },
+          "context": {
+            "type": "string",
+            "description": "Additional context or specific issue"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": ["process_name", "focus_areas"]
+      },
+      "integration": {
+        "type": "agent_delegation",
+        "target_agent": "bpm-analyst",
+        "method": "async_task_queue"
+      }
+    },
+    {
+      "name": "escalate_to_owner",
+      "description": "Escalate issue to Process Owner for decision",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "issue_summary": {
+            "type": "string",
+            "description": "Brief issue description"
+          },
+          "agency": {
+            "type": "string",
+            "description": "Affected agency (or 'multiple')"
+          },
+          "impact": {
+            "type": "object",
+            "properties": {
+              "kpi_affected": {"type": "string"},
+              "severity": {"type": "string", "enum": ["high", "medium", "low"]},
+              "financial_impact": {"type": "string"}
+            }
+          },
+          "recommendation": {
+            "type": "string",
+            "description": "Proposed solution"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "option": {"type": "string"},
+                "pros": {"type": "string"},
+                "cons": {"type": "string"},
+                "cost": {"type": "string"}
+              }
+            }
+          }
+        },
+        "required": ["issue_summary", "agency", "recommendation"]
+      },
+      "integration": {
+        "type": "agent_escalation",
+        "target_agent": "bpm-process-owner",
+        "method": "sync_decision_request"
+      }
+    },
+    {
+      "name": "generate_status_report",
+      "description": "Generate operational status report for Process Owners",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "enum": ["daily", "weekly", "monthly"],
+            "description": "Reporting period"
+          },
+          "processes": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Processes to include (or 'all')"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["executive-summary", "detailed", "metrics-only", "exception-report"],
+            "description": "Report format"
+          },
+          "recipients": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Report recipients"
+          }
+        },
+        "required": ["period", "format"]
+      },
+      "integration": {
+        "type": "report_generator",
+        "data_sources": ["odoo", "superset", "supabase"],
+        "output": ["email", "slack", "pdf"]
+      }
+    },
+    {
+      "name": "manage_change_rollout",
+      "description": "Manage rollout of approved process changes",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "change_id": {
+            "type": "string",
+            "description": "Approved change request ID"
+          },
+          "rollout_plan": {
+            "type": "object",
+            "properties": {
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "phase_name": {"type": "string"},
+                    "agencies": {"type": "array", "items": {"type": "string"}},
+                    "start_date": {"type": "string", "format": "date"},
+                    "end_date": {"type": "string", "format": "date"},
+                    "success_criteria": {"type": "string"}
+                  }
+                }
+              },
+              "rollback_plan": {"type": "string"},
+              "training_required": {"type": "boolean"}
+            }
+          },
+          "tracking": {
+            "type": "object",
+            "properties": {
+              "milestones": {"type": "array", "items": {"type": "string"}},
+              "kpis_to_monitor": {"type": "array", "items": {"type": "string"}},
+              "review_frequency": {"type": "string"}
+            }
+          }
+        },
+        "required": ["change_id", "rollout_plan"]
+      },
+      "integration": {
+        "type": "project_management",
+        "tracking_table": "change_rollouts",
+        "notifications": ["slack", "email"]
+      }
+    },
+    {
+      "name": "query_process_logs",
+      "description": "Query historical process execution logs for troubleshooting",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_name": {
+            "type": "string",
+            "description": "Process to query"
+          },
+          "date_range": {
+            "type": "object",
+            "properties": {
+              "start_date": {"type": "string", "format": "date"},
+              "end_date": {"type": "string", "format": "date"}
+            }
+          },
+          "filters": {
+            "type": "object",
+            "properties": {
+              "agency": {"type": "string"},
+              "status": {"type": "string"},
+              "error_type": {"type": "string"}
+            }
+          },
+          "aggregation": {
+            "type": "string",
+            "enum": ["count", "avg-duration", "error-rate", "none"],
+            "description": "How to aggregate results"
+          }
+        },
+        "required": ["process_name"]
+      },
+      "integration": {
+        "type": "supabase_query",
+        "table": "process_execution_log",
+        "indexes": ["process_name", "agency", "timestamp", "status"]
+      }
+    }
+  ],
+  "data_access": {
+    "odoo_models": [
+      "process.workflow.template",
+      "process.workflow.instance",
+      "process.execution.log",
+      "account.move",
+      "account.payment",
+      "account.bank.statement"
+    ],
+    "superset_dashboards": [
+      "process-manager-operational",
+      "real-time-process-monitoring",
+      "cross-agency-performance",
+      "automation-coverage"
+    ],
+    "supabase_tables": [
+      "process_execution_log",
+      "process_metrics",
+      "change_rollouts",
+      "coordination_initiatives",
+      "sop_documents",
+      "audit_logs"
+    ]
+  },
+  "notification_channels": {
+    "slack": "#finance-ssc-operations",
+    "email": "process-manager@agency.gov.ph",
+    "mobile": "sms_alerts_for_critical_issues"
+  },
+  "automation_integrations": {
+    "voice_agent": "receives_voice_commands",
+    "scheduled_tasks": "cron_jobs_for_monitoring",
+    "webhooks": "process_event_triggers"
+  }
+}

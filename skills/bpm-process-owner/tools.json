@@ -1,0 +1,264 @@
+{
+  "agent_name": "BPM Process Owner",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "review_process_metrics",
+      "description": "Retrieve KPI dashboard for a specific process over a time period",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_name": {
+            "type": "string",
+            "description": "Name of the process (e.g., 'month-end-closing', 'bir-filing')",
+            "enum": ["month-end-closing", "bir-filing", "bank-reconciliation", "budget-tracking", "inter-agency-transfers", "procurement-processing"]
+          },
+          "agency": {
+            "type": "string",
+            "description": "Agency code",
+            "enum": ["RIM", "CKVC", "BOM", "AGENCY4", "AGENCY5", "AGENCY6", "AGENCY7", "AGENCY8"]
+          },
+          "time_period": {
+            "type": "string",
+            "description": "Time period for metrics",
+            "enum": ["last-week", "last-month", "last-quarter", "ytd"]
+          }
+        },
+        "required": ["process_name", "agency", "time_period"]
+      },
+      "integration": {
+        "type": "superset_dashboard",
+        "endpoint": "/api/v1/chart/data",
+        "auth": "bearer_token"
+      }
+    },
+    {
+      "name": "approve_process_change",
+      "description": "Approve or reject a process change request",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "change_id": {
+            "type": "string",
+            "description": "Change request ID (e.g., 'CR-2025-043')"
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["approved", "rejected", "conditional_approval", "request_more_info"],
+            "description": "Approval decision"
+          },
+          "comments": {
+            "type": "string",
+            "description": "Decision rationale and any conditions"
+          },
+          "delegated_to": {
+            "type": "string",
+            "enum": ["process-manager", "automation-developer", "analyst"],
+            "description": "Agent to delegate implementation to"
+          }
+        },
+        "required": ["change_id", "decision", "comments"]
+      },
+      "integration": {
+        "type": "supabase_rpc",
+        "function": "process_change_approval",
+        "table": "change_requests"
+      }
+    },
+    {
+      "name": "request_process_analysis",
+      "description": "Request BPM Analyst to analyze a process for improvement opportunities",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_name": {
+            "type": "string",
+            "description": "Process to analyze"
+          },
+          "focus_areas": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["bottlenecks", "automation-opportunities", "error-reduction", "cost-optimization", "compliance-gaps"]
+            },
+            "description": "Specific aspects to focus on"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Analysis priority"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "description": "Expected completion date"
+          }
+        },
+        "required": ["process_name", "focus_areas", "priority"]
+      },
+      "integration": {
+        "type": "agent_delegation",
+        "target_agent": "bpm-analyst",
+        "method": "async_task"
+      }
+    },
+    {
+      "name": "escalate_to_coo",
+      "description": "Escalate strategic or cross-agency issues to COO/Process Excellence agent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "issue_summary": {
+            "type": "string",
+            "description": "Brief description of the issue"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium"],
+            "description": "Issue severity level"
+          },
+          "agencies_affected": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of affected agencies"
+          },
+          "recommendation": {
+            "type": "string",
+            "description": "Proposed solution or request for guidance"
+          },
+          "business_impact": {
+            "type": "object",
+            "properties": {
+              "financial": {"type": "string"},
+              "compliance": {"type": "string"},
+              "operational": {"type": "string"}
+            }
+          }
+        },
+        "required": ["issue_summary", "severity", "recommendation"]
+      },
+      "integration": {
+        "type": "agent_delegation",
+        "target_agent": "bpm-coo",
+        "method": "sync_escalation"
+      }
+    },
+    {
+      "name": "coordinate_with_owner",
+      "description": "Initiate coordination with another Process Owner on cross-agency matters",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "agency": {
+            "type": "string",
+            "description": "Target agency to coordinate with"
+          },
+          "topic": {
+            "type": "string",
+            "description": "Topic for coordination"
+          },
+          "proposal": {
+            "type": "string",
+            "description": "Proposed approach or request"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of process dependencies"
+          }
+        },
+        "required": ["agency", "topic", "proposal"]
+      },
+      "integration": {
+        "type": "agent_collaboration",
+        "target_agent": "bpm-process-owner",
+        "method": "peer_coordination"
+      }
+    },
+    {
+      "name": "query_process_documentation",
+      "description": "Search process SOPs, policies, and documentation",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query for documentation"
+          },
+          "doc_type": {
+            "type": "string",
+            "enum": ["sop", "policy", "audit-trail", "training-material"],
+            "description": "Type of documentation to search"
+          }
+        },
+        "required": ["query"]
+      },
+      "integration": {
+        "type": "supabase_vector_search",
+        "table": "process_documentation",
+        "embedding_column": "embedding"
+      }
+    },
+    {
+      "name": "get_odoo_process_data",
+      "description": "Retrieve process execution data from Odoo",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_type": {
+            "type": "string",
+            "description": "Type of process data to retrieve"
+          },
+          "filters": {
+            "type": "object",
+            "description": "Odoo domain filters"
+          },
+          "date_range": {
+            "type": "object",
+            "properties": {
+              "start_date": {"type": "string", "format": "date"},
+              "end_date": {"type": "string", "format": "date"}
+            }
+          }
+        },
+        "required": ["process_type"]
+      },
+      "integration": {
+        "type": "odoo_xmlrpc",
+        "models": ["account.move", "account.payment", "account.reconciliation", "budget.line"],
+        "methods": ["search_read"]
+      }
+    }
+  ],
+  "data_access": {
+    "odoo_models": [
+      "account.move",
+      "account.payment",
+      "account.bank.statement",
+      "account.reconciliation",
+      "budget.budget",
+      "budget.line"
+    ],
+    "superset_dashboards": [
+      "process-kpi-executive",
+      "month-end-closing-metrics",
+      "bir-filing-compliance",
+      "budget-variance-report"
+    ],
+    "supabase_tables": [
+      "process_metrics",
+      "change_requests",
+      "process_documentation",
+      "audit_logs",
+      "sop_documents"
+    ]
+  },
+  "notification_channels": {
+    "slack": "#finance-ssc-owners",
+    "email": "process-owners@agency.gov.ph"
+  }
+}
