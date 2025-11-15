@@ -1,10 +1,10 @@
 {
-  "name": "nextjs-notion-starter-kit",
+  "name": "opex-hybrid",
   "version": "2.0.0",
   "private": true,
-  "description": "The perfect starter kit for building beautiful websites with Next.js and Notion.",
-  "author": "Travis Fischer <travis@transitivebullsh.it>",
-  "repository": "transitive-bullshit/nextjs-notion-starter-kit",
+  "description": "OpEx Hybrid Platform - Next.js/Notion + Docusaurus Documentation Hub",
+  "author": "Jake Tolentino <jgtolentino_rn@yahoo.com>",
+  "repository": "jgtolentino/opex",
   "license": "MIT",
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -13,9 +13,13 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:docs": "cd docs && pnpm start",
     "build": "next build",
+    "build:docs": "cd docs && pnpm build",
+    "build:all": "pnpm build && pnpm build:docs",
     "start": "next start",
     "deploy": "vercel deploy",
+    "deploy:docs": "cd docs && pnpm deploy",
     "deps:upgrade": "[ -z $GITHUB_ACTIONS ] && pnpm up -L notion-client notion-types notion-utils react-notion-x || echo 'Skipping deps:update on CI'",
     "deps:link": "[ -z $GITHUB_ACTIONS ] && run-s deps:link:* || echo 'Skipping deps:update on CI'",
     "deps:unlink": "[ -z $GITHUB_ACTIONS ] && pnpm add notion-client notion-types notion-utils react-notion-x || echo 'Skipping deps:update on CI'",

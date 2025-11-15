@@ -37,3 +37,15 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# docusaurus
+docs/.docusaurus
+docs/build
+docs/node_modules
+docs/.cache
+docs/pnpm-lock.yaml
+
+# exported diagrams (auto-generated)
+docs/static/diagrams/**/*.svg
+docs/static/diagrams/**/*.png
+!docs/static/diagrams/.gitkeep

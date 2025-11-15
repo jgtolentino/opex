@@ -1,0 +1,36 @@
+name: Export Draw.io Diagrams
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/diagrams-src/**/*.drawio'
+  workflow_dispatch:
+
+jobs:
+  export-diagrams:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Draw.io CLI
+        run: |
+          wget https://github.com/jgraph/drawio-desktop/releases/download/v24.7.17/drawio-x86_64-24.7.17.AppImage
+          chmod +x drawio-x86_64-24.7.17.AppImage
+          sudo mv drawio-x86_64-24.7.17.AppImage /usr/local/bin/drawio
+
+      - name: Export diagrams to SVG and PNG
+        run: |
+          chmod +x ./scripts/export-diagrams.sh
+          ./scripts/export-diagrams.sh
+
+      - name: Commit exported diagrams
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/static/diagrams/
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: auto-export diagrams [skip ci]"
+          git push
