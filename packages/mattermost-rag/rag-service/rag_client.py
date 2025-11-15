@@ -12,10 +12,9 @@ from prompts import SYSTEM_PROMPT, build_rag_prompt, format_citations, assess_co
 
 logger = structlog.get_logger()
 
-# Initialize OpenRouter client (OpenAI-compatible API)
-openrouter_client = OpenAI(
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-    base_url="https://openrouter.ai/api/v1"
+# Initialize OpenAI client
+openai_client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY")
 )
 
 
@@ -144,10 +143,10 @@ class RAGClient:
             confidence=confidence_level,
         )
 
-        # Call OpenRouter with DeepSeek model
+        # Call OpenAI with GPT-4o-mini
         try:
-            response = openrouter_client.chat.completions.create(
-                model="deepseek/deepseek-chat",
+            response = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": prompt}

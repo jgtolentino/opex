@@ -21,8 +21,8 @@ services:
         type: SECRET
 
       # LLM / RAG config
-      - key: OPENROUTER_API_KEY
-        value: "sk-or-v1-d9f9db23eb674f9492da992a43e8c823"
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
         type: SECRET
 
       # Performance tuning
