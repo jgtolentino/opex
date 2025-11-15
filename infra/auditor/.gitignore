@@ -1,0 +1,53 @@
+# InfraAuditor .gitignore
+
+# Logs
+*.log
+infra_auditor.log
+
+# Reports
+infra_auditor_report.md
+
+# User configurations (keep examples, ignore actual configs)
+config/infra_spec.yaml
+config/dns_spec.yaml
+config/supabase_spec.yaml
+config/*_spec.yaml
+!config/*.example.yaml
+!config/opex_infra_spec.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,259 @@
+# OPEX Infrastructure Specification
+# Real configuration for the OPEX project based on existing setup
+
+# ============================================================================
+# DNS Configuration (DigitalOcean)
+# ============================================================================
+dns:
+  # Don't delete records not managed by this spec (for safety)
+  delete_unmanaged: false
+
+  domains:
+    - name: insightpulseai.net
+      records:
+        # Main domain (adjust IP based on your actual deployment)
+        - type: A
+          name: "@"
+          data: "134.209.111.123"  # Replace with actual IP
+          ttl: 3600
+
+        - type: A
+          name: "www"
+          data: "134.209.111.123"
+          ttl: 3600
+
+        # Mattermost chat instance
+        - type: A
+          name: "chat"
+          data: "134.209.111.123"  # From mattermost-rag.yaml: chat.insightpulseai.net
+          ttl: 3600
+
+        # RAG service endpoint
+        - type: A
+          name: "rag"
+          data: "134.209.111.124"  # Adjust based on DO App Platform assignment
+          ttl: 3600
+
+        # API endpoint
+        - type: A
+          name: "api"
+          data: "134.209.111.125"
+          ttl: 3600
+
+        # Email configuration (example using ImprovMX)
+        - type: MX
+          name: "@"
+          data: "10 mx1.improvmx.com."
+          ttl: 3600
+
+        - type: MX
+          name: "@"
+          data: "20 mx2.improvmx.com."
+          ttl: 3600
+
+        # SPF record
+        - type: TXT
+          name: "@"
+          data: "v=spf1 include:spf.improvmx.com ~all"
+          ttl: 3600
+
+# ============================================================================
+# Supabase Configuration
+# ============================================================================
+supabase:
+  # From existing deployment
+  project_url: "https://ublqmilcjtpnflofprkr.supabase.co"
+  project_ref: "ublqmilcjtpnflofprkr"
+
+  # Paths relative to repo root
+  migrations_dir: "supabase/migrations"
+  functions_dir: "supabase/functions"
+
+  # Database Schema
+  schema:
+    tables:
+      # Documents table for RAG
+      - name: documents
+        columns:
+          - name: id
+            type: uuid
+            primary_key: true
+            default: gen_random_uuid()
+          - name: content
+            type: text
+            nullable: false
+          - name: metadata
+            type: jsonb
+            default: '{}'
+          - name: embedding
+            type: vector(1536)
+          - name: created_at
+            type: timestamptz
+            default: now()
+          - name: updated_at
+            type: timestamptz
+            default: now()
+        rls_enabled: true
+
+      # Embeddings table for vector search
+      - name: embeddings
+        columns:
+          - name: id
+            type: bigserial
+            primary_key: true
+          - name: document_id
+            type: uuid
+          - name: chunk_index
+            type: integer
+          - name: chunk_text
+            type: text
+            nullable: false
+          - name: embedding
+            type: vector(1536)
+          - name: metadata
+            type: jsonb
+            default: '{}'
+          - name: created_at
+            type: timestamptz
+            default: now()
+        rls_enabled: true
+
+      # Queries tracking
+      - name: queries
+        columns:
+          - name: id
+            type: uuid
+            primary_key: true
+            default: gen_random_uuid()
+          - name: query_text
+            type: text
+            nullable: false
+          - name: results
+            type: jsonb
+          - name: response_time_ms
+            type: integer
+          - name: created_at
+            type: timestamptz
+            default: now()
+        rls_enabled: false
+
+    # Indexes for performance
+    indexes:
+      - name: idx_embeddings_vector
+        table: embeddings
+        type: ivfflat
+        column: embedding
+        options: "vector_cosine_ops"
+
+      - name: idx_embeddings_document
+        table: embeddings
+        columns:
+          - document_id
+
+      - name: idx_documents_created
+        table: documents
+        columns:
+          - created_at
+
+    # Required PostgreSQL extensions
+    extensions:
+      - name: vector
+        schema: public
+      - name: pg_trgm
+        schema: public
+
+  # RLS Policies
+  rls_policies:
+    # Documents policies
+    - table: documents
+      name: documents_select_policy
+      action: SELECT
+      role: authenticated
+      using: "true"
+
+    - table: documents
+      name: documents_insert_policy
+      action: INSERT
+      role: authenticated
+      check: "true"
+
+    - table: documents
+      name: documents_update_policy
+      action: UPDATE
+      role: authenticated
+      using: "true"
+      check: "true"
+
+    # Embeddings policies
+    - table: embeddings
+      name: embeddings_select_policy
+      action: SELECT
+      role: authenticated
+      using: "true"
+
+    - table: embeddings
+      name: embeddings_insert_policy
+      action: INSERT
+      role: service_role
+      check: "true"
+
+  # Database Functions
+  functions:
+    - name: match_embeddings
+      description: "Vector similarity search for RAG"
+      returns: "TABLE(id bigint, document_id uuid, chunk_text text, similarity float)"
+      language: plpgsql
+
+  # Edge Functions (existing in supabase/functions/)
+  edge_functions:
+    - name: opex-rag-query
+      description: "RAG query endpoint for OPEX documentation"
+      verify_deployed: true
+
+    - name: embedding-worker
+      description: "Background worker for generating embeddings"
+      verify_deployed: true
+
+    - name: embedding-maintenance
+      description: "Maintenance tasks for embeddings"
+      verify_deployed: true
+
+  # Storage Buckets
+  storage_buckets:
+    - name: documents
+      public: false
+      file_size_limit: 52428800  # 50MB
+      allowed_mime_types:
+        - "application/pdf"
+        - "text/plain"
+        - "text/markdown"
+        - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+  # Environment Variables (names only - values should be in .env)
+  env_vars:
+    # OpenAI
+    - OPENAI_API_KEY
+
+    # Supabase
+    - SUPABASE_URL
+    - SUPABASE_SERVICE_ROLE_KEY
+    - SUPABASE_ANON_KEY
+    - DATABASE_URL
+    - NEXT_PUBLIC_SUPABASE_URL
+    - NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    # Mattermost (from mattermost-rag.yaml)
+    - MM_SITE_URL
+    - MM_BOT_TOKEN
+    - MM_SLASH_TOKEN
+
+# ============================================================================
+# Notes
+# ============================================================================
+#
+# To use this configuration:
+# 1. Update DNS record IPs with your actual DigitalOcean App Platform IPs
+# 2. Verify Supabase project URL and ref match your project
+# 3. Run: python infra_auditor.py --config config/opex_infra_spec.yaml --audit-only
+# 4. Review the output and fix any issues
+# 5. Apply: python infra_auditor.py --config config/opex_infra_spec.yaml --confirm-apply
