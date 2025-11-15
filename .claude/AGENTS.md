@@ -4,12 +4,16 @@ This file declares the available sub-agents (skills) for the Operational Excelle
 
 ## Overview
 
-The OpEx BPM agent orchestrates four specialized sub-agents, each designed to handle specific aspects of Business Process Management:
+The OpEx agent orchestrates five specialized sub-agents, each designed to handle specific aspects of Business Process Management and AI product development:
 
+### BPM-Focused Skills
 1. **BPM Copywriter** – Documentation and content creation
 2. **BPM Knowledge Guide** – Wiki navigation and knowledge retrieval
 3. **BPM Learning Designer** – Training and onboarding materials
 4. **BPM Transformation Partner** – Strategic planning and roadmaps
+
+### Cross-Functional Skills
+5. **CTO-Mentor** – AI platform architecture, product strategy, and org design
 
 ## Sub-Agents
 
@@ -121,6 +125,47 @@ Use the BPM Transformation Partner to create a 12-month roadmap for launching a 
 
 ---
 
+### 5. CTO-Mentor
+
+**Skill Name**: `cto_mentor`
+**Location**: `.claude/skills/cto_mentor/SKILL.md`
+
+**Purpose**: Provides CTO-level guidance for AI-first products, platforms, and org design. Makes pragmatic, execution-focused decisions optimized for product moat, safety, and shipping velocity.
+
+**Use Cases**:
+- AI platform and agent orchestration design (multi-model, multi-agent)
+- LLM product architecture (APIs, safety, evals, observability)
+- Org design: hiring, team topology, and delegation
+- Partner evaluation: build vs buy vs integrate
+- Technical roadmaps and capability planning
+
+**When to Invoke**:
+- User needs architecture or platform decisions
+- Designing AI product roadmaps (6-18 months)
+- Evaluating build vs buy vs integrate options
+- Planning hiring for AI/ML teams
+- Making strategic technology choices
+- Message prefix: `cto:`, `strategy:`, `platform:`
+
+**Example Prompts**:
+```
+cto: design an AI platform roadmap for InsightPulseAI for the next 12 months
+
+cto: compare using OpenAI vs mixed open-weight models for our orchestration layer
+
+cto: define hiring plan for 3–5 engineers to support agentic automation for clients
+
+cto: should we build our own LLM fine-tuning pipeline or use a vendor?
+```
+
+**Key Differentiators**:
+- Always proposes 2-3 options with trade-offs, then recommends ONE
+- Translates strategy into concrete actions (repos, services, roles, timelines)
+- Explicitly addresses security, safety, and compliance
+- Opinionated and pragmatic, not hand-wavy
+
+---
+
 ## Integration with Landing Page
 
 Each skill is designed to complement specific sections of the BPM landing page:
@@ -178,7 +223,12 @@ Complex tasks may require multiple skills in sequence:
 ```
 
 **Available Skills**:
+
+**BPM-Focused**:
 - `bpm_copywriter` – Polish and write BPM content
 - `bpm_knowledge_agent` – Navigate and summarize BPM wiki
 - `bpm_learning_designer` – Create training and onboarding
 - `bpm_transformation_partner` – Plan BPM initiatives and roadmaps
+
+**Cross-Functional**:
+- `cto_mentor` – AI platform architecture, product strategy, org design (prefix: `cto:`, `strategy:`, `platform:`)
