@@ -91,8 +91,9 @@ const config: Config = {
     navbar: {
       title: 'OpEx Docs',
       logo: {
-        alt: 'OpEx Logo',
+        alt: 'TBWA Logo',
         src: 'img/logo.svg',
+        style: { borderRadius: '4px' },
       },
       items: [
         {
