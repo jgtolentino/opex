@@ -1,0 +1,282 @@
+{
+  "name": "Service Health Check Monitor",
+  "nodes": [
+    {
+      "id": "Cron_Every10Min",
+      "name": "Every 10 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 10,
+              "unit": "minutes"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "HTTP_CheckMCP",
+      "name": "Check MCP Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [540, 200],
+      "parameters": {
+        "url": "https://mcp.insightpulseai.net/health",
+        "method": "GET",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "HTTP_CheckERP",
+      "name": "Check ERP (Odoo)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [540, 300],
+      "parameters": {
+        "url": "https://erp.insightpulseai.net/web/health",
+        "method": "GET",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "HTTP_CheckOCR",
+      "name": "Check OCR Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [540, 400],
+      "parameters": {
+        "url": "https://ade-ocr-backend-d9dru.ondigitalocean.app/health",
+        "method": "GET",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "HTTP_CheckN8N",
+      "name": "Check n8n Self",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [540, 500],
+      "parameters": {
+        "url": "https://ipa.insightpulseai.net/healthz",
+        "method": "GET",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "Merge_Results",
+      "name": "Merge All Checks",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [840, 300],
+      "parameters": {
+        "mode": "mergeByIndex",
+        "options": {}
+      }
+    },
+    {
+      "id": "Evaluate_Status",
+      "name": "Evaluate Health",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1120, 300],
+      "parameters": {
+        "jsCode": "const services = [\n  { name: 'MCP', result: $input.first().json },\n  { name: 'ERP (Odoo)', result: $input.all()[1]?.json },\n  { name: 'OCR Service', result: $input.all()[2]?.json },\n  { name: 'n8n', result: $input.all()[3]?.json }\n];\n\nconst failures = [];\nconst warnings = [];\n\nservices.forEach(service => {\n  const startTime = Date.now();\n  \n  // Check if service responded\n  if (!service.result || service.result.error) {\n    failures.push({\n      service: service.name,\n      status: 'DOWN',\n      error: service.result?.error || 'No response',\n      timestamp: new Date().toISOString()\n    });\n  }\n  // Check response time\n  else if (service.result.responseTime && service.result.responseTime > 500) {\n    warnings.push({\n      service: service.name,\n      status: 'SLOW',\n      responseTime: service.result.responseTime,\n      threshold: 500\n    });\n  }\n});\n\nreturn {\n  timestamp: new Date().toISOString(),\n  failures: failures,\n  warnings: warnings,\n  hasIssues: failures.length > 0 || warnings.length > 0,\n  summary: `${failures.length} down, ${warnings.length} slow`\n};"
+      }
+    },
+    {
+      "id": "Filter_HasIssues",
+      "name": "Has Issues?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1400, 300],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json[\"hasIssues\"]}}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "FormatAlert",
+      "name": "Format Alert Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1680, 200],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "=🚨 **Service Health Alert** 🚨\n\n**Summary**: {{$json[\"summary\"]}}\n**Time**: {{$json[\"timestamp\"]}}\n\n{{#if $json[\"failures\"].length > 0}}\n**Services Down**:\n{{#each $json[\"failures\"]}}\n- ❌ {{this.service}}: {{this.error}}\n{{/each}}\n{{/if}}\n\n{{#if $json[\"warnings\"].length > 0}}\n**Performance Warnings**:\n{{#each $json[\"warnings\"]}}\n- ⚠️ {{this.service}}: {{this.responseTime}}ms (threshold: {{this.threshold}}ms)\n{{/each}}\n{{/if}}\n\n[View Monitoring Dashboard](https://ipa.insightpulseai.net/monitoring)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Mattermost_Alert",
+      "name": "Post to Mattermost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1960, 200],
+      "parameters": {
+        "url": "={{$env.MATTERMOST_WEBHOOK_URL}}",
+        "method": "POST",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"channel\": \"ops-alerts\",\n  \"username\": \"Health Monitor\",\n  \"icon_emoji\": \":warning:\",\n  \"text\": \"{{$json[\"message\"]}}\"\n}"
+      }
+    },
+    {
+      "id": "GitHub_CreateIssue",
+      "name": "Create GitHub Issue (Optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1960, 300],
+      "parameters": {
+        "url": "https://api.github.com/repos/jgtolentino/opex/issues",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"title\": \"[AUTO] Service Health Alert: {{$json[\"summary\"]}}\",\n  \"body\": \"{{$json[\"message\"]}}\",\n  \"labels\": [\"infra\", \"automated\", \"health-check\"]\n}"
+      }
+    }
+  ],
+  "connections": {
+    "Every 10 Minutes": [
+      {
+        "node": "Check MCP Service",
+        "type": "main",
+        "index": 0
+      },
+      {
+        "node": "Check ERP (Odoo)",
+        "type": "main",
+        "index": 0
+      },
+      {
+        "node": "Check OCR Service",
+        "type": "main",
+        "index": 0
+      },
+      {
+        "node": "Check n8n Self",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Check MCP Service": [
+      {
+        "node": "Merge All Checks",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Check ERP (Odoo)": [
+      {
+        "node": "Merge All Checks",
+        "type": "main",
+        "index": 1
+      }
+    ],
+    "Check OCR Service": [
+      {
+        "node": "Merge All Checks",
+        "type": "main",
+        "index": 2
+      }
+    ],
+    "Check n8n Self": [
+      {
+        "node": "Merge All Checks",
+        "type": "main",
+        "index": 3
+      }
+    ],
+    "Merge All Checks": [
+      {
+        "node": "Evaluate Health",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Evaluate Health": [
+      {
+        "node": "Has Issues?",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Has Issues?": [
+      {
+        "node": "Format Alert Message",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Format Alert Message": [
+      {
+        "node": "Post to Mattermost",
+        "type": "main",
+        "index": 0
+      },
+      {
+        "node": "Create GitHub Issue (Optional)",
+        "type": "main",
+        "index": 0
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "health-check-monitor-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "monitoring"
+    },
+    {
+      "name": "devops"
+    },
+    {
+      "name": "health-check"
+    }
+  ]
+}

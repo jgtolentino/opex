@@ -1,0 +1,293 @@
+{
+  "name": "BIR Document Sync to RAG",
+  "nodes": [
+    {
+      "id": "Cron_Daily3AM",
+      "name": "Daily Trigger (3 AM)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 3,
+              "minute": 0
+            }
+          ]
+        },
+        "timezone": "Asia/Manila"
+      }
+    },
+    {
+      "id": "HTTP_CheckBIRSitemap",
+      "name": "Fetch BIR Sitemap/RSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [540, 300],
+      "parameters": {
+        "url": "https://www.bir.gov.ph/sitemap.xml",
+        "method": "GET",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Parse_Sitemap",
+      "name": "Parse Document URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [840, 300],
+      "parameters": {
+        "jsCode": "// Simple XML parsing for document URLs\nconst sitemap = $input.first().json.data;\nconst urlPattern = /<loc>(.*?\\.pdf)<\\/loc>/gi;\nconst matches = [...sitemap.matchAll(urlPattern)];\n\nconst documents = matches.map(match => ({\n  url: match[1],\n  source: 'bir_website',\n  discoveredAt: new Date().toISOString()\n}));\n\nreturn documents.map(doc => ({ json: doc }));"
+      }
+    },
+    {
+      "id": "HTTP_CheckExisting",
+      "name": "Check Existing Sources",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1120, 300],
+      "parameters": {
+        "url": "https://ublqmilcjtpnflofprkr.supabase.co/rest/v1/opex.embedding_sources",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "source_url,last_updated"
+            },
+            {
+              "name": "source_type",
+              "value": "eq.bir_document"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Filter_NewDocs",
+      "name": "Filter New Documents",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1400, 300],
+      "parameters": {
+        "jsCode": "const newDocs = $input.first().json;\nconst existing = $input.all()[1].json;\n\nconst existingUrls = new Set(existing.map(doc => doc.source_url));\n\nconst toProcess = newDocs.filter(doc => !existingUrls.has(doc.url));\n\nreturn toProcess.map(doc => ({ json: doc }));"
+      }
+    },
+    {
+      "id": "SplitInBatches",
+      "name": "Process in Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [1680, 300],
+      "parameters": {
+        "batchSize": 5
+      }
+    },
+    {
+      "id": "HTTP_DownloadDoc",
+      "name": "Download Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1960, 300],
+      "parameters": {
+        "url": "={{$json[\"url\"]}}",
+        "method": "GET",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "HTTP_CallEmbeddingWorker",
+      "name": "Call Embedding Worker",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2240, 300],
+      "parameters": {
+        "url": "https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/embedding-worker",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"sourceUrl\": \"{{$json[\"url\"]}}\",\n  \"sourceType\": \"bir_document\",\n  \"content\": \"{{$json[\"data\"]}}\",\n  \"metadata\": {\n    \"source\": \"bir_website\",\n    \"discoveredAt\": \"{{$json[\"discoveredAt\"]}}\"\n  }\n}"
+      }
+    },
+    {
+      "id": "Wait",
+      "name": "Wait 2 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2520, 300],
+      "parameters": {
+        "unit": "seconds",
+        "amount": 2
+      }
+    },
+    {
+      "id": "Aggregate",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.aggregator",
+      "typeVersion": 1,
+      "position": [2800, 300],
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "results"
+      }
+    },
+    {
+      "id": "FormatSummary",
+      "name": "Format Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [3080, 300],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "=📚 **BIR Document Sync Complete** 📚\n\n**Timestamp**: {{$now.toISO()}}\n**Documents Processed**: {{$json[\"results\"].length}}\n**Source**: BIR Website (sitemap.xml)\n\n**Status**: ✅ Successfully synced to RAG system\n\n[View Embedding Sources](https://ipa.insightpulseai.net/admin/embeddings)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Mattermost_Notify",
+      "name": "Post Summary to Mattermost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [3360, 300],
+      "parameters": {
+        "url": "={{$env.MATTERMOST_WEBHOOK_URL}}",
+        "method": "POST",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"channel\": \"ops-notifications\",\n  \"username\": \"Document Sync\",\n  \"icon_emoji\": \":books:\",\n  \"text\": \"{{$json[\"message\"]}}\"\n}"
+      }
+    }
+  ],
+  "connections": {
+    "Daily Trigger (3 AM)": [
+      {
+        "node": "Fetch BIR Sitemap/RSS",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Fetch BIR Sitemap/RSS": [
+      {
+        "node": "Parse Document URLs",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Parse Document URLs": [
+      {
+        "node": "Check Existing Sources",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Check Existing Sources": [
+      {
+        "node": "Filter New Documents",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Filter New Documents": [
+      {
+        "node": "Process in Batches",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Process in Batches": [
+      {
+        "node": "Download Document",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Download Document": [
+      {
+        "node": "Call Embedding Worker",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Call Embedding Worker": [
+      {
+        "node": "Wait 2 Seconds",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Wait 2 Seconds": [
+      {
+        "node": "Aggregate Results",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Aggregate Results": [
+      {
+        "node": "Format Summary",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Format Summary": [
+      {
+        "node": "Post Summary to Mattermost",
+        "type": "main",
+        "index": 0
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "document-sync-rag-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "rag"
+    },
+    {
+      "name": "automation"
+    },
+    {
+      "name": "bir"
+    },
+    {
+      "name": "sync"
+    }
+  ]
+}

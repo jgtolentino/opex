@@ -1,0 +1,188 @@
+{
+  "name": "PH Tax Deadline Notifier",
+  "nodes": [
+    {
+      "id": "Cron_DailyCheck",
+      "name": "Daily Trigger (8 AM)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 8,
+              "minute": 0
+            }
+          ]
+        },
+        "timezone": "Asia/Manila"
+      }
+    },
+    {
+      "id": "HTTP_QueryDeadlines",
+      "name": "Query Upcoming Deadlines",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [540, 300],
+      "parameters": {
+        "url": "https://ublqmilcjtpnflofprkr.supabase.co/rest/v1/rpc/get_upcoming_tax_deadlines",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"days_ahead\": 7\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Filter_HasDeadlines",
+      "name": "Check if Deadlines Exist",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [840, 300],
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "SplitInBatches",
+      "name": "Split by Agency",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [1120, 200],
+      "parameters": {
+        "batchSize": 1
+      }
+    },
+    {
+      "id": "FormatMessage",
+      "name": "Format Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1400, 200],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "=🚨 **Tax Deadline Reminder** 🚨\n\n**Agency**: {{$json[\"agency\"]}}\n**Form**: {{$json[\"form_type\"]}} ({{$json[\"form_name\"]}})\n**Due Date**: {{$json[\"due_date\"]}}\n**Days Remaining**: {{$json[\"days_until_due\"]}}\n\n**Description**: {{$json[\"description\"]}}\n\n[View Form Guide](https://ipa.insightpulseai.net/docs/tax/{{$json[\"form_type\"]}})"
+            },
+            {
+              "name": "channel",
+              "value": "={{$json[\"mattermost_channel\"] || \"finance-alerts\"}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Mattermost_SendNotification",
+      "name": "Post to Mattermost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1680, 200],
+      "parameters": {
+        "url": "={{$env.MATTERMOST_WEBHOOK_URL}}",
+        "method": "POST",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"channel\": \"{{$json[\"channel\"]}}\",\n  \"text\": \"{{$json[\"message\"]}}\"\n}"
+      }
+    },
+    {
+      "id": "LogSuccess",
+      "name": "Log to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1960, 200],
+      "parameters": {
+        "url": "https://ublqmilcjtpnflofprkr.supabase.co/rest/v1/notification_log",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"type\": \"tax_deadline\",\n  \"channel\": \"{{$json[\"channel\"]}}\",\n  \"status\": \"sent\",\n  \"metadata\": {\n    \"form_type\": \"{{$json[\"form_type\"]}}\",\n    \"agency\": \"{{$json[\"agency\"]}}\"\n  }\n}"
+      }
+    }
+  ],
+  "connections": {
+    "Daily Trigger (8 AM)": [
+      {
+        "node": "Query Upcoming Deadlines",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Query Upcoming Deadlines": [
+      {
+        "node": "Check if Deadlines Exist",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Check if Deadlines Exist": [
+      {
+        "node": "Split by Agency",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Split by Agency": [
+      {
+        "node": "Format Notification",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Format Notification": [
+      {
+        "node": "Post to Mattermost",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Post to Mattermost": [
+      {
+        "node": "Log to Supabase",
+        "type": "main",
+        "index": 0
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "tax-deadline-notifier-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "finance"
+    },
+    {
+      "name": "tax"
+    },
+    {
+      "name": "notifications"
+    }
+  ]
+}
