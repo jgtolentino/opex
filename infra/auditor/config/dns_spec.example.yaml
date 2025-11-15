@@ -1,0 +1,127 @@
+# DNS Configuration Specification for DigitalOcean
+# This file defines the desired state of DNS records
+
+# Control whether to delete records not in this spec
+delete_unmanaged: false
+
+# List of domains to manage
+domains:
+  # Main domain
+  - name: example.com
+    records:
+      # A Records - Point domain to IP addresses
+      - type: A
+        name: "@"  # Root domain
+        data: "1.2.3.4"
+        ttl: 3600
+
+      - type: A
+        name: "www"
+        data: "1.2.3.4"
+        ttl: 3600
+
+      # Application subdomains
+      - type: A
+        name: "api"
+        data: "5.6.7.8"
+        ttl: 3600
+
+      - type: A
+        name: "app"
+        data: "5.6.7.8"
+        ttl: 3600
+
+      - type: A
+        name: "erp"
+        data: "9.10.11.12"
+        ttl: 3600
+
+      - type: A
+        name: "auth"
+        data: "13.14.15.16"
+        ttl: 3600
+
+      - type: A
+        name: "mcp"
+        data: "17.18.19.20"
+        ttl: 3600
+
+      # CNAME Records - Alias one domain to another
+      - type: CNAME
+        name: "blog"
+        data: "example.ghost.io."
+        ttl: 3600
+
+      - type: CNAME
+        name: "docs"
+        data: "example.gitbook.io."
+        ttl: 3600
+
+      # MX Records - Mail servers
+      - type: MX
+        name: "@"
+        data: "10 mail1.example.com."
+        ttl: 3600
+
+      - type: MX
+        name: "@"
+        data: "20 mail2.example.com."
+        ttl: 3600
+
+      # TXT Records - Verification and SPF
+      - type: TXT
+        name: "@"
+        data: "v=spf1 include:_spf.google.com ~all"
+        ttl: 3600
+
+      - type: TXT
+        name: "_dmarc"
+        data: "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com"
+        ttl: 3600
+
+      # CAA Records - Certificate Authority Authorization
+      - type: CAA
+        name: "@"
+        data: "0 issue \"letsencrypt.org\""
+        ttl: 3600
+
+  # Subdomain or additional domain
+  - name: staging.example.com
+    records:
+      - type: A
+        name: "@"
+        data: "21.22.23.24"
+        ttl: 1800
+
+      - type: A
+        name: "api"
+        data: "21.22.23.24"
+        ttl: 1800
+
+      - type: A
+        name: "app"
+        data: "21.22.23.24"
+        ttl: 1800
+
+# Example for a real-world setup with DigitalOcean App Platform
+# - name: insightpulseai.net
+#   records:
+#     - type: A
+#       name: "@"
+#       data: "134.209.111.123"  # Your DigitalOcean droplet or app IP
+#       ttl: 3600
+#
+#     - type: A
+#       name: "chat"
+#       data: "134.209.111.123"  # Mattermost instance
+#       ttl: 3600
+#
+#     - type: A
+#       name: "rag"
+#       data: "134.209.111.124"  # RAG service
+#       ttl: 3600
+#
+#     - type: CNAME
+#       name: "www"
+#       data: "insightpulseai.net."
+#       ttl: 3600

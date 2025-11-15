@@ -1,253 +1,280 @@
-# OpEx Hybrid Platform
+# JakeVoiceDev - Voice RAG + Coding Assistant
 
-> Comprehensive operational excellence documentation hub combining Next.js/Notion + Docusaurus
+A voice-first AI assistant powered by the OpenAI Agents SDK, combining:
+- **Voice I/O** (speak naturally, get spoken responses)
+- **RAG** (query your Scout/InsightPulse/Odoo/Supabase docs)
+- **Coding help** (Odoo CE/OCA, Supabase, general dev)
+- **Personal assistant** (task creation, planning, summaries)
 
-[![Build Status](https://github.com/jgtolentino/opex/actions/workflows/deploy-docs.yml/badge.svg)](https://github.com/jgtolentino/opex/actions/workflows/deploy-docs.yml) [![Prettier Code Formatting](https://img.shields.io/badge/code_style-prettier-brightgreen.svg)](https://prettier.io)
-
-## Overview
-
-OpEx is a hybrid documentation platform that combines:
-- **Next.js/Notion** for public-facing content and marketing
-- **Docusaurus 3** for comprehensive organizational documentation
-
-This approach provides the flexibility of Notion for content creation with the power of version-controlled, searchable documentation.
+Based on the [OpenAI Agents SDK voice agents cookbook](https://github.com/openai/openai-cookbook/tree/main/examples/agents_sdk).
 
 ## Features
 
-### Public Site (Next.js + Notion)
-- Notion-powered content management
-- Beautiful article pages with smooth previews
-- Automatic social images
-- Dark mode support
-- Responsive design
+### Voice Interaction
+- **STT**: OpenAI `gpt-4o-transcribe` (no local Whisper needed)
+- **TTS**: OpenAI `gpt-4o-mini-tts` (no macOS `say` needed)
+- **Pipeline**: Single integrated voice loop via Agents SDK
 
-### Documentation Hub (Docusaurus)
-- **Knowledge Base**: Glossary, FAQ, getting started guides
-- **HR Documentation**: Policies, workflows (hiring, onboarding, performance, offboarding), templates
-- **Finance Documentation**: Expense policies, procurement workflows, approval matrices
-- **Operations**: SOPs, incident response, change management
-- **Technical Docs**: Architecture, API documentation, development guides
-- **Automated Diagram Export**: Git-based BPMN/Draw.io workflow with SVG/PNG generation
+### Tools Available
+1. **Web Search** - Real-time web search for current info
+2. **Scout/InsightPulse Docs** - Query your Scout documentation (RAG stub ready)
+3. **Odoo Knowledge** - Search Odoo CE/OCA dev knowledge (RAG stub ready)
+4. **Supabase Docs** - Query Supabase best practices (RAG stub ready)
+5. **Task Creation** - Personal assistant task/note management
 
-## Quick Start
+### Agent Behavior
+- Conversational but concise (optimized for listening)
+- Calls tools automatically when helpful
+- Can handle coding questions, planning, clarifications
+- Multi-turn context awareness
 
-### Prerequisites
-- Node.js >= 18
-- pnpm (recommended)
+## Setup
 
-### Installation
+### 1. Prerequisites
 
-```bash
-# Clone repository
-git clone https://github.com/jgtolentino/opex.git
-cd opex
+- Python 3.9+
+- OpenAI API key
+- Microphone and speakers/headphones
 
-# Install dependencies
-pnpm install
-
-# Start Next.js development server
-pnpm dev
-
-# Start Docusaurus development server (in separate terminal)
-pnpm dev:docs
-```
-
-### URLs
-- **Next.js Site**: http://localhost:3000
-- **Docusaurus Docs**: http://localhost:3000/opex/ (after deployment)
-- **Production**: https://jgtolentino.github.io/opex/
-
-## Project Structure
-
-```
-opex/
-├── components/          # Next.js components
-├── lib/                 # Next.js utilities
-├── pages/               # Next.js pages
-├── docs/                # Docusaurus documentation hub
-│   ├── docs/            # Documentation content
-│   │   ├── knowledge-base/
-│   │   ├── hr/ (policies, workflows, templates)
-│   │   ├── finance/
-│   │   ├── operations/
-│   │   ├── technical/
-│   │   └── ticketing/
-│   ├── diagrams-src/    # Source .drawio files (Git-tracked)
-│   ├── static/diagrams/ # Auto-exported SVG/PNG
-│   └── blog/            # Documentation updates
-├── scripts/             # Automation scripts
-│   └── export-diagrams.sh
-├── templates/           # Documentation templates
-│   └── sop-template.md
-└── .github/workflows/   # CI/CD automation
-    ├── deploy-docs.yml
-    └── export-diagrams.yml
-```
-
-## Documentation Workflow
-
-### Creating Documentation
-
-1. **Navigate to category**: `docs/docs/[category]/`
-2. **Create markdown file**: Follow frontmatter format
-3. **Add to sidebar**: Update `docs/sidebars.ts`
-4. **Commit changes**: Documentation auto-deploys via GitHub Actions
-
-### Creating Diagrams
-
-1. **Create .drawio file**: Use Draw.io Desktop or VS Code extension
-2. **Save to diagrams-src**: Organize by category (hr/, finance/, etc.)
-3. **Commit to Git**: GitHub Actions auto-exports to SVG/PNG
-4. **Reference in docs**: Use `/diagrams/[category]/[filename].svg`
-
-See [Diagram Workflow Documentation](docs/diagrams-src/README.md) for details.
-
-## Available Scripts
-
-### Next.js (Public Site)
-```bash
-pnpm dev              # Start development server
-pnpm build            # Build production bundle
-pnpm start            # Start production server
-pnpm deploy           # Deploy to Vercel
-```
-
-### Docusaurus (Documentation)
-```bash
-pnpm dev:docs         # Start Docusaurus dev server
-pnpm build:docs       # Build Docusaurus static site
-pnpm build:all        # Build both Next.js + Docusaurus
-pnpm deploy:docs      # Deploy documentation to GitHub Pages
-```
-
-## Deployment
-
-### Current Status
-- ✅ **Docusaurus Build**: Production-ready (verified 2025-11-15)
-- ✅ **Dev Server**: Running at http://localhost:3000/opex/
-- ✅ **Cross-Site Navigation**: Configured (Docusaurus → Vercel)
-- ✅ **Git Commit**: Changes committed and pushed to main branch
-- ✅ **Vercel Deployment**: docs-8vyrsbyl9-jake-tolentinos-projects-c0369c83.vercel.app (deploying)
-- ⏳ **Production URL**: Pending Vercel build completion
-- ⏳ **Landing Page Link**: Pending (see INTEGRATION.md)
-
-### Next.js Site
-Deployed to Vercel automatically on push to `main` branch.
-
-**Live URL**: https://nextjs-notion-starter-kit-eight-iota.vercel.app
-
-### Docusaurus Documentation
-Deployed to GitHub Pages via GitHub Actions on changes to `docs/**` files.
-
-**Target URL**: https://jgtolentino.github.io/opex/
-
-**GitHub Pages Setup**:
-1. Repository Settings → Pages
-2. Source: Deploy from branch
-3. Branch: `gh-pages` / `root`
-4. Push to `main` branch to trigger first deployment
-5. GitHub Actions workflows handle automated deployment
-
-### Manual Deployment (GitHub Actions Blocked)
-
-If GitHub Actions is unavailable due to billing issues, deploy manually:
+### 2. Install Dependencies
 
 ```bash
-# 1. Build production bundle
-cd docs
-pnpm build
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# 2. Deploy to GitHub Pages
-# Option A: Using gh-pages package (recommended)
-pnpm add -D gh-pages
-npx gh-pages -d build -b gh-pages
-
-# Option B: Manual git push
-git checkout --orphan gh-pages
-git add -f build
-git commit -m "Deploy Docusaurus"
-git push origin gh-pages --force
-git checkout main
+# Install packages
+pip install -r requirements.txt
 ```
 
-**First Deployment Checklist**:
-- [ ] Enable GitHub Pages in repository settings
-  - Settings → Pages → Source: Branch `gh-pages` / `root`
-- [ ] Deploy manually (see above) OR fix GitHub Actions billing
-- [ ] Wait for Pages to build (2-3 minutes)
-- [ ] Verify site at https://jgtolentino.github.io/opex/
-- [ ] Test cross-site navigation
-- [ ] Add documentation link to Vercel site (see INTEGRATION.md)
+### 3. Set OpenAI API Key
 
-## Configuration
+```bash
+export OPENAI_API_KEY="sk-your-key-here"
+```
 
-### Next.js Site
-Edit [site.config.ts](./site.config.ts) for Notion integration and site settings.
+Or use a `.env` file:
 
-### Docusaurus
-Edit [docs/docusaurus.config.ts](./docs/docusaurus.config.ts) for documentation site settings.
+```bash
+echo "OPENAI_API_KEY=sk-your-key-here" > .env
+```
 
-## Documentation Templates
+Then modify `voice_agent.py` to load it:
 
-Pre-built templates available in `/templates`:
-- **SOP Template**: Standard operating procedure format
-- **Policy Template**: Policy documentation structure
-- **Workflow Template**: BPMN workflow documentation
+```python
+from dotenv import load_dotenv
+load_dotenv()
+```
 
-## GitHub Actions Workflows
+## Usage
 
-### Documentation Deployment
-- **Trigger**: Push to `main` with changes to `docs/**`
-- **Action**: Build Docusaurus → Deploy to GitHub Pages
-- **Workflow**: [.github/workflows/deploy-docs.yml](.github/workflows/deploy-docs.yml)
+### Basic Run
 
-### Diagram Export
-- **Trigger**: Push to `main` with changes to `.drawio` files
-- **Action**: Export diagrams to SVG/PNG → Commit to repo
-- **Workflow**: [.github/workflows/export-diagrams.yml](.github/workflows/export-diagrams.yml)
+```bash
+python voice_agent.py
+```
 
-## Key Documentation Pages
+### Interaction Flow
 
-- [Introduction](https://jgtolentino.github.io/opex/docs/knowledge-base/introduction) - Documentation hub overview
-- [Employee Requisition Workflow](https://jgtolentino.github.io/opex/docs/hr/workflows/employee-requisition) - Complete BPMN example
-- [Glossary](https://jgtolentino.github.io/opex/docs/knowledge-base/glossary) - Common terms
-- [FAQ](https://jgtolentino.github.io/opex/docs/knowledge-base/faq) - Frequently asked questions
+1. **Start**: Script starts and waits for you
+2. **Press Enter**: Begin recording your query
+3. **Speak**: Ask your question naturally
+4. **Press Enter**: Stop recording
+5. **Listen**: Agent processes and speaks the response
+6. **Repeat**: Continue with follow-up questions
 
-## Contributing
+### Example Queries
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Make changes and commit: `git commit -m "Add my feature"`
-4. Push to branch: `git push origin feature/my-feature`
-5. Submit a pull request
+**Personal Assistant:**
+- "Create a high priority task to review the Scout analytics dashboard"
+- "Summarize what I should focus on today for the CES project"
 
-### Documentation Contributions
-Click "Edit this page" at the bottom of any documentation page to submit changes via GitHub.
+**Coding Help:**
+- "How do I set up row-level security in Supabase for a multi-tenant app?"
+- "What's the best way to extend an Odoo CE purchase order model?"
+- "Search the web for the latest Supabase realtime features"
 
-## Technology Stack
+**RAG Queries:**
+- "What does our Scout documentation say about data visualization?"
+- "Look up how InsightPulse handles report generation"
 
-- **Frontend**: Next.js 15, React 19
-- **CMS**: Notion API
-- **Documentation**: Docusaurus 3
-- **Diagrams**: Draw.io, BPMN 2.0
-- **Styling**: CSS Modules, Dark Mode
-- **Deployment**: Vercel (Next.js), GitHub Pages (Docusaurus)
-- **CI/CD**: GitHub Actions
+**General:**
+- "What are the OWASP top 10 for 2024?"
+- "Explain the difference between Postgres RLS and application-level auth"
+
+## Customization
+
+### Wire Up RAG Backends
+
+The script has placeholder functions in `voice_agent.py`:
+- `query_scout_docs()`
+- `query_odoo_knowledge()`
+- `query_supabase_docs()`
+
+Replace the placeholders with actual calls to your Supabase vector search:
+
+```python
+@function_tool
+def query_scout_docs(query: str) -> str:
+    """Search Scout / InsightPulse documentation."""
+    from supabase import create_client
+
+    supabase = create_client(
+        os.getenv("SUPABASE_URL"),
+        os.getenv("SUPABASE_KEY")
+    )
+
+    # Example: call your edge function
+    result = supabase.rpc('search_scout_docs', {'query': query}).execute()
+
+    # Format and return top results
+    docs = result.data[:3]  # top 3 chunks
+    return "\n".join([doc['content'] for doc in docs])
+```
+
+### Add More Tools
+
+Add any `@function_tool` decorated function to the `voice_agent` tools list:
+
+```python
+@function_tool
+def deploy_to_staging(service: str) -> str:
+    """Deploy a service to staging environment."""
+    # Your deployment logic
+    return f"Deployed {service} to staging"
+
+voice_agent = Agent(
+    # ...
+    tools=[
+        WebSearchTool(search_context_size="low"),
+        query_scout_docs,
+        deploy_to_staging,  # Add here
+        # ...
+    ],
+)
+```
+
+### Adjust Agent Personality
+
+Edit `VOICE_ASSISTANT_INSTRUCTIONS` in `voice_agent.py` to change tone, verbosity, or domain focus.
+
+### Change Model
+
+The default is `gpt-4o-mini` for cost efficiency. For better reasoning, switch to `gpt-4o`:
+
+```python
+voice_agent = Agent(
+    # ...
+    model="gpt-4o",  # More capable, higher cost
+)
+```
+
+## Architecture
+
+```
+┌─────────────┐
+│  Your Mic   │
+└──────┬──────┘
+       │ Audio
+       ▼
+┌─────────────────────┐
+│  VoicePipeline      │
+│  - STT (gpt-4o)     │
+│  - Workflow Router  │
+└──────┬──────────────┘
+       │ Text
+       ▼
+┌─────────────────────┐
+│  JakeVoiceDev       │
+│  Agent              │
+│  - Instructions     │
+│  - Tools (RAG, etc) │
+│  - Model (4o-mini)  │
+└──────┬──────────────┘
+       │ Response Text
+       ▼
+┌─────────────────────┐
+│  VoicePipeline      │
+│  - TTS (4o-mini)    │
+└──────┬──────────────┘
+       │ Audio
+       ▼
+┌─────────────┐
+│ Your Speaker│
+└─────────────┘
+```
+
+## Next Steps
+
+### Immediate
+1. **Test the basics**: Run `python voice_agent.py` and try a few queries
+2. **Wire up RAG**: Connect `query_scout_docs` to your Supabase vector search
+3. **Add task backend**: Connect `create_task_note` to your task management system
+
+### Advanced
+1. **Multi-agent routing**: Add a triage agent for complex workflows (like NotebookLM deep research)
+2. **Memory/context**: Persist conversation history across sessions
+3. **Streaming improvements**: Add visual feedback (waveform, transcription display)
+4. **Tool expansions**: Add code execution, file operations, etc.
+
+### Integration with Claude Code CLI
+
+This voice agent complements your existing Claude Code CLI workflow:
+- **Voice agent**: Quick queries, planning, documentation lookup
+- **Claude Code**: Deep implementation, file editing, git operations
+
+Example workflow:
+1. Ask voice agent: "What's the best approach to add RLS to my Supabase tables?"
+2. Listen to summary and suggestions
+3. Switch to Claude Code CLI: "Implement RLS based on the approach we just discussed"
+
+## Troubleshooting
+
+### Audio Issues
+
+**No microphone detected:**
+```bash
+python -m sounddevice
+```
+Should list your audio devices. Set default if needed.
+
+**Permission denied (macOS):**
+System Preferences → Security & Privacy → Microphone → Allow Terminal/iTerm
+
+### API Issues
+
+**OpenAI API errors:**
+- Check `OPENAI_API_KEY` is set correctly
+- Verify API key has sufficient credits
+- Check rate limits if getting 429 errors
+
+### Installation Issues
+
+**`openai-agents` not found:**
+```bash
+pip install --upgrade openai openai-agents
+```
+
+**Audio library errors (Linux):**
+```bash
+sudo apt-get install portaudio19-dev python3-pyaudio
+pip install --upgrade sounddevice
+```
+
+## Resources
+
+- [OpenAI Agents SDK Docs](https://github.com/openai/openai-agents)
+- [Voice Agents Cookbook](https://github.com/openai/openai-cookbook/tree/main/examples/agents_sdk)
+- [Supabase Vector Search](https://supabase.com/docs/guides/ai)
+- [Claude Code CLI](https://github.com/anthropics/claude-code)
 
 ## License
 
-MIT © Jake Tolentino
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/jgtolentino/opex/issues)
-- **Email**: jgtolentino_rn@yahoo.com
-- **Documentation Feedback**: Submit via "Edit this page" links
+MIT (or whatever your opex project uses)
 
 ---
 
-**Built with**:
-- [Next.js](https://nextjs.org/)
-- [Notion](https://notion.so/)
-- [Docusaurus](https://docusaurus.io/)
-- [Draw.io](https://www.drawio.com/)
+**Built with:**
+- OpenAI Agents SDK
+- Supabase (RAG backend)
+- Claude Code (for heavy lifting)

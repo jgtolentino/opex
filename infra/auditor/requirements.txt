@@ -1,0 +1,9 @@
+# InfraAuditor Python Dependencies
+
+# Configuration parsing
+pyyaml>=6.0
+
+# Note: The following CLI tools must be installed separately:
+# - doctl (DigitalOcean CLI): https://docs.digitalocean.com/reference/doctl/how-to/install/
+# - supabase (Supabase CLI): https://supabase.com/docs/guides/cli
+# - psql (PostgreSQL client): Part of PostgreSQL installation

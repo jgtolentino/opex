@@ -1,0 +1,243 @@
+# Supabase Configuration Specification
+# This file defines the desired state of your Supabase project
+
+# Project identification
+project_url: "https://ublqmilcjtpnflofprkr.supabase.co"
+project_ref: "ublqmilcjtpnflofprkr"  # Extract from URL
+
+# Directory paths (relative to repo root)
+migrations_dir: "supabase/migrations"
+functions_dir: "supabase/functions"
+
+# Database Schema
+schema:
+  # Expected tables
+  tables:
+    - name: documents
+      columns:
+        - name: id
+          type: uuid
+          primary_key: true
+          default: gen_random_uuid()
+        - name: content
+          type: text
+          nullable: false
+        - name: metadata
+          type: jsonb
+          default: '{}'
+        - name: embedding
+          type: vector(1536)
+          nullable: true
+        - name: created_at
+          type: timestamptz
+          default: now()
+      rls_enabled: true
+
+    - name: embeddings
+      columns:
+        - name: id
+          type: bigserial
+          primary_key: true
+        - name: document_id
+          type: uuid
+          references: documents(id)
+        - name: chunk_index
+          type: integer
+        - name: chunk_text
+          type: text
+        - name: embedding
+          type: vector(1536)
+        - name: metadata
+          type: jsonb
+        - name: created_at
+          type: timestamptz
+          default: now()
+      rls_enabled: true
+
+    - name: queries
+      columns:
+        - name: id
+          type: uuid
+          primary_key: true
+          default: gen_random_uuid()
+        - name: query_text
+          type: text
+        - name: results
+          type: jsonb
+        - name: created_at
+          type: timestamptz
+          default: now()
+      rls_enabled: false
+
+  # Required indexes
+  indexes:
+    - name: idx_embeddings_vector
+      table: embeddings
+      type: ivfflat
+      column: embedding
+      options: "vector_cosine_ops"
+      lists: 100
+
+    - name: idx_documents_created
+      table: documents
+      columns:
+        - created_at
+
+  # Required extensions
+  extensions:
+    - name: vector
+      schema: public
+    - name: pg_trgm
+      schema: public
+    - name: pgcrypto
+      schema: public
+
+# RLS (Row Level Security) Policies
+rls_policies:
+  - table: documents
+    name: documents_select_policy
+    action: SELECT
+    role: authenticated
+    using: "true"
+
+  - table: documents
+    name: documents_insert_policy
+    action: INSERT
+    role: authenticated
+    check: "true"
+
+  - table: embeddings
+    name: embeddings_select_policy
+    action: SELECT
+    role: authenticated
+    using: "true"
+
+  - table: embeddings
+    name: embeddings_insert_policy
+    action: INSERT
+    role: service_role
+    check: "true"
+
+# Database Functions
+functions:
+  - name: match_embeddings
+    returns: "TABLE(id bigint, document_id uuid, chunk_text text, similarity float)"
+    language: plpgsql
+    security: definer
+    sql: |
+      CREATE OR REPLACE FUNCTION match_embeddings(
+        query_embedding vector(1536),
+        match_threshold float DEFAULT 0.7,
+        match_count int DEFAULT 5
+      )
+      RETURNS TABLE (
+        id bigint,
+        document_id uuid,
+        chunk_text text,
+        similarity float
+      )
+      LANGUAGE plpgsql
+      AS $$
+      BEGIN
+        RETURN QUERY
+        SELECT
+          e.id,
+          e.document_id,
+          e.chunk_text,
+          1 - (e.embedding <=> query_embedding) AS similarity
+        FROM embeddings e
+        WHERE 1 - (e.embedding <=> query_embedding) > match_threshold
+        ORDER BY e.embedding <=> query_embedding
+        LIMIT match_count;
+      END;
+      $$;
+
+  - name: refresh_embeddings_count
+    returns: void
+    language: plpgsql
+    sql: |
+      CREATE OR REPLACE FUNCTION refresh_embeddings_count()
+      RETURNS void
+      LANGUAGE plpgsql
+      AS $$
+      BEGIN
+        -- Update materialized view or counter
+        PERFORM COUNT(*) FROM embeddings;
+      END;
+      $$;
+
+# Edge Functions
+edge_functions:
+  - name: opex-rag-query
+    description: "RAG query endpoint for OPEX documentation"
+    verify_deployed: true
+
+  - name: embedding-worker
+    description: "Background worker for generating embeddings"
+    verify_deployed: true
+
+  - name: embedding-maintenance
+    description: "Maintenance tasks for embeddings"
+    verify_deployed: true
+
+# Storage Buckets
+storage_buckets:
+  - name: documents
+    public: false
+    file_size_limit: 52428800  # 50MB
+    allowed_mime_types:
+      - "application/pdf"
+      - "text/plain"
+      - "text/markdown"
+      - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+  - name: embeddings-cache
+    public: false
+    file_size_limit: 10485760  # 10MB
+    allowed_mime_types:
+      - "application/json"
+
+# Auth Configuration
+auth:
+  # Email templates
+  email_templates:
+    - type: confirmation
+      subject: "Confirm your email"
+
+  # Auth providers
+  providers:
+    - name: email
+      enabled: true
+    - name: google
+      enabled: false
+    - name: github
+      enabled: false
+
+  # Redirect URLs
+  redirect_urls:
+    - "http://localhost:3000/auth/callback"
+    - "https://app.example.com/auth/callback"
+
+# Environment Variables (names only, not values)
+env_vars:
+  - OPENAI_API_KEY
+  - SUPABASE_URL
+  - SUPABASE_SERVICE_ROLE_KEY
+  - SUPABASE_ANON_KEY
+  - DATABASE_URL
+  - NEXT_PUBLIC_SUPABASE_URL
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Expected API endpoints
+api_endpoints:
+  - path: /rest/v1/documents
+    method: GET
+    auth_required: true
+
+  - path: /rest/v1/embeddings
+    method: GET
+    auth_required: true
+
+  - path: /functions/v1/opex-rag-query
+    method: POST
+    auth_required: true

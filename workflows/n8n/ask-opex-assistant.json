@@ -1,0 +1,129 @@
+{
+  "name": "Ask OpEx / PH Tax Assistant (Supabase)",
+  "nodes": [
+    {
+      "id": "Webhook_AskOpEx",
+      "name": "Incoming Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ask-opex-assistant",
+        "responseMode": "onReceived",
+        "responseCode": 200,
+        "responseData": "text",
+        "responseBody": "={{$json[\"answer\"] || \"No answer returned.\"}}",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "webhookId": "ask-opex-assistant-webhook"
+    },
+    {
+      "id": "Set_Question",
+      "name": "Set Question & Params",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [540, 300],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "question",
+              "value": "={{$json[\"text\"] || $json[\"message\"] || \"\"}}"
+            },
+            {
+              "name": "assistant",
+              "value": "opex"
+            },
+            {
+              "name": "domain",
+              "value": "={{$json[\"domain\"] || \"hr\"}}"
+            },
+            {
+              "name": "process",
+              "value": "={{$json[\"process\"] || \"general\"}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "HTTP_AskAssistant",
+      "name": "Call Supabase Edge Function",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [840, 300],
+      "parameters": {
+        "url": "https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/opex-rag-query",
+        "method": "POST",
+        "authentication": "none",
+        "sendBody": true,
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"assistant\": $json[\"assistant\"],\n  \"question\": $json[\"question\"],\n  \"domain\": $json[\"domain\"],\n  \"process\": $json[\"process\"]\n}"
+      }
+    },
+    {
+      "id": "Extract_Answer",
+      "name": "Extract Answer",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "answer",
+              "value": "={{$json[\"answer\"] || $json[\"raw\"]?.answer || \"(No answer returned from assistant)\"}}"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Incoming Webhook": [
+      {
+        "node": "Set Question & Params",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Set Question & Params": [
+      {
+        "node": "Call Supabase Edge Function",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Call Supabase Edge Function": [
+      {
+        "node": "Extract Answer",
+        "type": "main",
+        "index": 0
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ask-opex-assistant-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "opex"
+    },
+    {
+      "name": "supabase"
+    },
+    {
+      "name": "rag"
+    }
+  ]
+}

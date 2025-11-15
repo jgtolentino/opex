@@ -1,0 +1,90 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mmuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mmuserpass}
+      POSTGRES_DB: mattermost
+    volumes:
+      - mm-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mmuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # mattermost:
+  #   # Comment out - using existing Mattermost on port 8065
+  #   image: mattermost/mattermost-team-edition:latest
+  #   restart: unless-stopped
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     MM_CONFIG: "/mattermost/config/config.json"
+  #     MM_SQLSETTINGS_DRIVERNAME: "postgres"
+  #     MM_SQLSETTINGS_DATASOURCE: "postgres://mmuser:${POSTGRES_PASSWORD:-mmuserpass}@db:5432/mattermost?sslmode=disable&connect_timeout=10"
+  #     MM_SERVICESETTINGS_SITEURL: "${MM_SITE_URL:-http://localhost:8065}"
+  #     # Enable slash commands
+  #     MM_SERVICESETTINGS_ENABLECOMMANDS: "true"
+  #     MM_SERVICESETTINGS_ENABLEDEVELOPER: "true"
+  #   ports:
+  #     - "8065:8065"
+  #   volumes:
+  #     - mm-app-data:/mattermost/data
+  #     - mm-config:/mattermost/config
+  #     - mm-logs:/mattermost/logs
+  #     - mm-plugins:/mattermost/plugins
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:8065/api/v4/system/ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  rag-service:
+    build: ./rag-service
+    restart: unless-stopped
+    # Comment out - using existing Mattermost on port 8065
+    # depends_on:
+    #   mattermost:
+    #     condition: service_healthy
+    environment:
+      # Mattermost integration (using existing Mattermost on localhost:8065)
+      MM_SITE_URL: "http://host.docker.internal:8065"
+      MM_BOT_TOKEN: ${MM_BOT_TOKEN:-placeholder_configure_after_mattermost_setup}
+      MM_SLASH_TOKEN: ${MM_SLASH_TOKEN:-placeholder_configure_after_mattermost_setup}
+
+      # LLM / RAG config (using OpenRouter with DeepSeek)
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-placeholder_add_your_key}
+      RAG_BACKEND_URL: ${RAG_BACKEND_URL:-http://localhost:8000}
+
+      # Supabase for RAG storage
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+
+      # Performance tuning
+      MAX_CONCURRENT_REQUESTS: ${MAX_CONCURRENT_REQUESTS:-10}
+      REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-30}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      # Mount for local development
+      - ./rag-service:/app:ro
+
+volumes:
+  mm-db-data:
+  mm-app-data:
+  mm-config:
+  mm-logs:
+  mm-plugins:

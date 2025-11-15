@@ -25,7 +25,7 @@ const SYSTEM_PROMPTS = {
 // Initialize clients
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  db: { schema: 'opex' }
+  db: { schema: 'opex' },
 });
 
 interface QueryRequest {
@@ -90,10 +90,12 @@ async function queryAssistant(request: QueryRequest): Promise<QueryResponse> {
     const run = await openai.beta.threads.runs.create(thread.id, {
       model: 'gpt-4-turbo-preview',
       instructions: getSystemPrompt(request.assistant),
-      tools: [{
-        type: 'file_search',
-        file_search: fileSearchConfig,
-      }],
+      tools: [
+        {
+          type: 'file_search',
+          file_search: fileSearchConfig,
+        },
+      ],
     });
 
     let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
@@ -121,14 +123,16 @@ async function queryAssistant(request: QueryRequest): Promise<QueryResponse> {
       answer,
       citations,
       metadata: {
-        assistantId: run.assistant_id || '',
+        assistantId: (run as any).assistant_id || '',
         threadId: thread.id,
         runId: run.id,
-        tokensUsed: runStatus.usage ? {
-          prompt: runStatus.usage.prompt_tokens,
-          completion: runStatus.usage.completion_tokens,
-          total: runStatus.usage.total_tokens,
-        } : undefined,
+        tokensUsed: runStatus.usage
+          ? {
+              prompt: runStatus.usage.prompt_tokens,
+              completion: runStatus.usage.completion_tokens,
+              total: runStatus.usage.total_tokens,
+            }
+          : undefined,
         responseTimeMs,
       },
     };

@@ -1,0 +1,154 @@
+---
+# Finance RAG Knowledge Base - Metadata Schema
+# This file documents all sources with structured metadata for vector store ingestion
+
+files:
+  # BIR Official Documentation - Form 1601-C
+  - id: bir_1601c_instructions_html
+    path: raw_docs/bir/1601C_instructions.html
+    source_url: https://efps.bir.gov.ph/efps-war/EFPSWeb_war/help/help1601c_v2.html
+    domain: tax
+    form: "1601C"
+    doc_type: policy
+    jurisdiction: PH
+    period_type: monthly
+    version: "2018.01"
+    date_retrieved: "2025-01-15"
+    notes: "Official BIR online guidelines and instructions for Form 1601-C (Monthly Remittance Return of Income Taxes Withheld on Compensation)"
+
+  - id: bir_1601c_form_pdf
+    path: raw_docs/bir/1601C_form_2018.pdf
+    source_url: https://bir-cdn.bir.gov.ph/local/pdf/1601C%20final%20Jan%202018%20with%20DPA.pdf
+    domain: tax
+    form: "1601C"
+    doc_type: policy
+    jurisdiction: PH
+    period_type: monthly
+    version: "2018.01"
+    date_retrieved: "2025-01-15"
+    notes: "Official Form 1601-C (January 2018 version) with complete filing instructions and DPA. Two copies must be filed with BIR and one held by taxpayer."
+
+  # BIR Official Documentation - Form 2550M
+  - id: bir_2550m_instructions_html
+    path: raw_docs/bir/2550M_instructions.html
+    source_url: https://efps.bir.gov.ph/efps-war/EFPSWeb_war/help/help2550m2006.html
+    domain: tax
+    form: "2550M"
+    doc_type: policy
+    jurisdiction: PH
+    period_type: monthly
+    version: "2006"
+    date_retrieved: "2025-01-15"
+    notes: "Official BIR guidelines for Form 2550M (Monthly VAT Declaration). Note: RMC No. 52-2023 allows optional monthly filing with no prescribed deadline."
+
+  # BIR Official Documentation - Form 2550Q
+  - id: bir_2550q_form_pdf
+    path: raw_docs/bir/2550Q_form_2024.pdf
+    source_url: https://bir-cdn.bir.gov.ph/BIR/pdf/2550Q%20%20April%202024%20ENCS_Final.pdf
+    domain: tax
+    form: "2550Q"
+    doc_type: policy
+    jurisdiction: PH
+    period_type: quarterly
+    version: "2024.04"
+    date_retrieved: "2025-01-15"
+    notes: "Official Form 2550Q (April 2024 ENCS version) - Quarterly Value-Added Tax Return. VAT rate is 12% of gross sales."
+
+  - id: bir_2550q_guidelines_pdf
+    path: raw_docs/bir/2550Q_guidelines_2024.pdf
+    source_url: https://bir-cdn.bir.gov.ph/BIR/pdf/2550Q%20guidelines%20April%202024_final.pdf
+    domain: tax
+    form: "2550Q"
+    doc_type: policy
+    jurisdiction: PH
+    period_type: quarterly
+    version: "2024.04"
+    date_retrieved: "2025-01-15"
+    notes: "Complete guidelines and instructions for Form 2550Q (April 2024). Filing deadline: within 25 days following close of each taxable quarter. Electronic filing required."
+
+  # Month-End Closing Best Practices
+  - id: month_end_virtuecpas
+    path: raw_docs/sop_workflows/month_end_close_virtuecpas.html
+    source_url: https://virtuecpas.com/month-end-close-process-checklist/
+    domain: month_end
+    form: "N/A"
+    doc_type: workflow
+    jurisdiction: Global
+    period_type: monthly
+    version: "2025"
+    date_retrieved: "2025-01-15"
+    notes: "Comprehensive month-end close process guide covering data collection, account reconciliations, asset reviews, inventory management, journal entries, and financial statement preparation."
+
+  - id: month_end_prophix_10step
+    path: raw_docs/sop_workflows/month_end_close_prophix.html
+    source_url: https://www.prophix.com/blog/10-step-month-end-close-checklist-best-practices/
+    domain: month_end
+    form: "N/A"
+    doc_type: workflow
+    jurisdiction: Global
+    period_type: monthly
+    version: "2025"
+    date_retrieved: "2025-01-15"
+    notes: "10-step structured month-end close checklist with best practices including continuous close approach, organization, prioritization, automation, and communication strategies."
+
+  - id: financial_close_netsuite
+    path: raw_docs/sop_workflows/financial_close_netsuite.html
+    source_url: https://www.netsuite.com/portal/resource/articles/accounting/close-process.shtml
+    domain: month_end
+    form: "N/A"
+    doc_type: workflow
+    jurisdiction: Global
+    period_type: monthly
+    version: "2025"
+    date_retrieved: "2025-01-15"
+    notes: "NetSuite's comprehensive financial close process guide with 10-step framework, accounting controls, reconciliation procedures, and automation recommendations."
+
+  - id: month_end_close_brex_gaap
+    path: raw_docs/sop_workflows/month_end_close_brex.html
+    source_url: https://www.brex.com/spend-trends/accounting/month-end-close-process-checklist
+    domain: month_end
+    form: "N/A"
+    doc_type: workflow
+    jurisdiction: Global
+    period_type: monthly
+    version: "2025"
+    date_retrieved: "2025-01-15"
+    notes: "Month-end close process with strong focus on GAAP/IFRS compliance and regulatory requirements. Includes statistics: 94% high workload, 87% overtime, 78% pressure to close faster."
+
+# Vector Store Routing Rules
+vector_store_mapping:
+  vs_policies:
+    - doc_type: policy
+    - doc_type: calendar
+    description: "BIR manuals, revenue regulations, internal policies, tax calendars"
+
+  vs_sops_workflows:
+    - doc_type: sop
+    - doc_type: workflow
+    description: "Month-end close SOPs, BIR form workflows, process documentation"
+
+  vs_examples_systems:
+    - doc_type: example
+    - doc_type: system_manual
+    description: "Sample filled forms, journal templates, ERP menu paths, report dictionary"
+
+# Metadata Field Definitions
+metadata_schema:
+  required_fields:
+    - id: "Unique kebab-case identifier"
+    - path: "Relative path from repo root"
+    - source_url: "Original URL where content was retrieved"
+    - domain: "tax | month_end | general_finance"
+    - form: "BIR form number or N/A"
+    - doc_type: "policy | sop | workflow | example | system_manual | calendar"
+    - jurisdiction: "PH | Global"
+    - period_type: "monthly | quarterly | annual | mixed | N/A"
+    - version: "Version or date string"
+    - notes: "1-2 line human summary"
+
+  optional_fields:
+    - date_retrieved: "ISO date when content was downloaded"
+    - role_primary: "Finance Supervisor | Senior Finance Manager | Tax Manager | N/A"
+    - section: "Purpose | Steps | Controls | Deadlines | FAQ"
+    - activity_type: "preparation | review | approval | filing | payment"
+    - system: "ERP | eBIR | eFPS | Bank | N/A"
