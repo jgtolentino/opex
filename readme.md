@@ -126,8 +126,10 @@ pnpm deploy:docs      # Deploy documentation to GitHub Pages
 - ✅ **Docusaurus Build**: Production-ready (verified 2025-11-15)
 - ✅ **Dev Server**: Running at http://localhost:3000/opex/
 - ✅ **Cross-Site Navigation**: Configured (Docusaurus → Vercel)
-- ⏳ **GitHub Pages**: Pending activation
-- ⏳ **Vercel Integration**: Pending (see INTEGRATION.md)
+- ✅ **Git Commit**: Changes committed and pushed to main branch
+- ✅ **Vercel Deployment**: docs-8vyrsbyl9-jake-tolentinos-projects-c0369c83.vercel.app (deploying)
+- ⏳ **Production URL**: Pending Vercel build completion
+- ⏳ **Landing Page Link**: Pending (see INTEGRATION.md)
 
 ### Next.js Site
 Deployed to Vercel automatically on push to `main` branch.
@@ -146,10 +148,33 @@ Deployed to GitHub Pages via GitHub Actions on changes to `docs/**` files.
 4. Push to `main` branch to trigger first deployment
 5. GitHub Actions workflows handle automated deployment
 
+### Manual Deployment (GitHub Actions Blocked)
+
+If GitHub Actions is unavailable due to billing issues, deploy manually:
+
+```bash
+# 1. Build production bundle
+cd docs
+pnpm build
+
+# 2. Deploy to GitHub Pages
+# Option A: Using gh-pages package (recommended)
+pnpm add -D gh-pages
+npx gh-pages -d build -b gh-pages
+
+# Option B: Manual git push
+git checkout --orphan gh-pages
+git add -f build
+git commit -m "Deploy Docusaurus"
+git push origin gh-pages --force
+git checkout main
+```
+
 **First Deployment Checklist**:
 - [ ] Enable GitHub Pages in repository settings
-- [ ] Push changes to `main` branch
-- [ ] Wait for GitHub Actions to complete
+  - Settings → Pages → Source: Branch `gh-pages` / `root`
+- [ ] Deploy manually (see above) OR fix GitHub Actions billing
+- [ ] Wait for Pages to build (2-3 minutes)
 - [ ] Verify site at https://jgtolentino.github.io/opex/
 - [ ] Test cross-site navigation
 - [ ] Add documentation link to Vercel site (see INTEGRATION.md)

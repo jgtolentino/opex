@@ -17,12 +17,12 @@ export default siteConfig({
   description: 'Example Next.js Notion Starter Kit Site',
 
   // social usernames (optional)
-  twitter: 'transitive_bs',
-  github: 'transitive-bullshit',
+  // twitter: 'transitive_bs',
+  // github: 'transitive-bullshit',
   linkedin: 'fisch2',
   // mastodon: '#', // optional mastodon profile URL, provides link verification
-  // newsletter: '#', // optional newsletter URL
-  // youtube: '#', // optional youtube channel name or `channel/UCGbXXXXXXXXXXXXXXXXXXXXXX`
+  newsletter: 'https://www.notion.so/team/1db87692-d25c-81b3-9ecf-0042625a31df/join', // Notion Workspace
+  youtube: 'https://docs-9qs1bqcvs-jake-tolentinos-projects-c0369c83.vercel.app', // Documentation Hub
 
   // default notion icon and cover images for site-wide consistency (optional)
   // page-specific values will override these site-wide defaults

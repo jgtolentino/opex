@@ -128,8 +128,8 @@ export function FooterImpl() {
         {config.youtube && (
           <a
             className={styles.youtube}
-            href={`https://www.youtube.com/${config.youtube}`}
-            title={`YouTube ${config.author}`}
+            href={config.youtube.startsWith('http') ? config.youtube : `https://www.youtube.com/${config.youtube}`}
+            title={config.youtube.startsWith('http') ? 'Documentation' : `YouTube ${config.author}`}
             target='_blank'
             rel='noopener noreferrer'
           >

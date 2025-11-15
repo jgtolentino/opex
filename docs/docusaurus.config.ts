@@ -15,10 +15,10 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://jgtolentino.github.io',
+  url: 'https://docs-8vyrsbyl9-jake-tolentinos-projects-c0369c83.vercel.app',
   // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/opex/',
+  // For Vercel deployment, use root path
+  baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -96,11 +96,6 @@ const config: Config = {
       },
       items: [
         {
-          href: 'https://nextjs-notion-starter-kit-eight-iota.vercel.app',
-          label: '← Home',
-          position: 'left',
-        },
-        {
           type: 'docSidebar',
           sidebarId: 'knowledgeBaseSidebar',
           position: 'left',
@@ -118,10 +113,14 @@ const config: Config = {
           position: 'left',
           label: 'Finance',
         },
-        {to: '/blog', label: 'Updates', position: 'left'},
         {
-          href: 'https://github.com/jgtolentino/opex',
-          label: 'GitHub',
+          href: 'https://nextjs-notion-starter-kit-eight-iota.vercel.app',
+          label: 'Home',
+          position: 'left',
+        },
+        {
+          href: 'https://docusaurus.io/',
+          label: 'Docusaurus',
           position: 'right',
         },
       ],
@@ -163,12 +162,12 @@ const config: Config = {
           title: 'More',
           items: [
             {
-              label: 'Updates',
-              to: '/blog',
+              label: 'Notion Workspace',
+              href: 'https://www.notion.so/team/1db87692-d25c-81b3-9ecf-0042625a31df/join',
             },
             {
-              label: 'GitHub',
-              href: 'https://github.com/jgtolentino/opex',
+              label: 'Docusaurus',
+              href: 'https://docusaurus.io/',
             },
           ],
         },
