@@ -3,7 +3,7 @@ region: sgp
 services:
   - name: rag-service
     github:
-      repo: jgtolentino/insightpulse-odoo
+      repo: jgtolentino/opex
       branch: main
       deploy_on_push: true
     source_dir: /packages/mattermost-rag/rag-service
