@@ -27,26 +27,33 @@
 - [x] Indexes for performance (HNSW vector index)
 - [x] RLS policies configured
 
+### Vector Search Implementation
+- [x] Implemented `_supabase_search()` in `rag_client.py`
+- [x] OpenAI embedding generation (text-embedding-3-small)
+- [x] Supabase pgvector integration
+- [x] Added supabase-py dependency
+- [x] Updated DO app spec with Supabase credentials (https://ublqmilcjtpnflofprkr.supabase.co)
+
 ## ⏳ Pending
 
 ### Critical (Required for Full Functionality)
-1. **Set OpenAI API Key** in DigitalOcean environment variables
-   - Go to: https://cloud.digitalocean.com/apps/7bfabd64-5b56-4222-9403-3d4cf3b23209/settings
-   - Add `OPENAI_API_KEY` with your OpenAI API key from Supabase secrets
+1. **Apply Database Migration via Supabase Dashboard** ⚠️ MANUAL STEP REQUIRED
+   - Go to: https://supabase.com/dashboard/project/ublqmilcjtpnflofprkr/sql/new
+   - Copy contents of `supabase/migrations/20251115_opex_rag_minimal.sql`
+   - Execute SQL in dashboard
 
-2. **Apply Database Migration**
-   ```bash
-   psql "$POSTGRES_URL" -f supabase/migrations/20251115_opex_rag_minimal.sql
-   ```
+2. **Set OpenAI API Key** in DigitalOcean environment variables
+   - Go to: https://cloud.digitalocean.com/apps/7bfabd64-5b56-4222-9403-3d4cf3b23209/settings
+   - Add `OPENAI_API_KEY` with your OpenAI API key from Supabase Vault
+
+3. **Set Supabase Service Role Key** in DigitalOcean environment variables
+   - Same settings page as above
+   - Add `SUPABASE_SERVICE_ROLE_KEY` with your service role key
 
 ### Next Phase (RAG Implementation)
-3. **Create ingest-upload Edge Function**
+4. **Create ingest-upload Edge Function**
    - File: `supabase/functions/ingest-upload/index.ts`
    - Purpose: Process uploaded files → chunks → embeddings
-
-4. **Update RAG Client to Query Vector DB**
-   - Modify `rag_client.py` to call `match_opex_documents()` function
-   - Integrate with Supabase connection
 
 5. **Deploy Edge Function**
    ```bash
@@ -68,15 +75,17 @@
 - ✅ Health check endpoint responding
 
 ### What Needs Fixing
-- ❌ OpenAI API key not set (causes 401 errors)
-- ⏳ Vector database not populated yet
-- ⏳ Real RAG retrieval not implemented yet
+- ⏳ Database migration not applied (manual step required)
+- ⏳ OpenAI API key not set in DO (manual step required)
+- ⏳ Supabase service role key not set in DO (manual step required)
+- ⏳ Vector database not populated yet (will work after migration)
 
 ## 📋 Deployment IDs
 
 - **App ID**: 7bfabd64-5b56-4222-9403-3d4cf3b23209
-- **Latest Deployment**: a6fcfe06-6d5d-49c6-a1d4-544a549d43f8 (in progress)
+- **Latest Deployment**: c2ec4102-66b8-41c9-845f-1e9dfc19403e (building with vector search)
 - **Service URL**: https://mattermost-rag-egb6n.ondigitalocean.app
+- **Supabase Project**: ublqmilcjtpnflofprkr (opex)
 
 ## 🔗 Quick Links
 
@@ -113,5 +122,5 @@ Full system will be working when:
 
 ---
 
-**Last Updated**: 2025-11-15 15:48 UTC
-**Status**: Deployment in progress, OpenAI API key pending
+**Last Updated**: 2025-11-15 16:38 UTC
+**Status**: Vector search implemented and deploying - requires manual secret configuration
