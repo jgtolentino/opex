@@ -27,25 +27,6 @@ from agents.extensions.rag import WebSearchTool
 # =============================================================================
 
 @function_tool
-def query_scout_docs(query: str) -> str:
-    """
-    Search Scout / InsightPulse documentation and return a concise summary.
-
-    Args:
-        query: The search query for Scout/InsightPulse docs
-
-    Returns:
-        Relevant documentation snippets or summary
-    """
-    # TODO: Replace with actual Supabase RAG call
-    # Example: call your Supabase edge function that does vector search
-    # result = supabase.rpc('search_scout_docs', {'query': query})
-
-    print(f"[RAG] Searching Scout docs for: {query}")
-    return f"[RAG placeholder] Found results for Scout docs: '{query}'. Wire this to your Supabase vector search."
-
-
-@function_tool
 def query_odoo_knowledge(query: str) -> str:
     """
     Search Odoo CE/OCA knowledge base for development help.
@@ -103,14 +84,13 @@ You are JakeVoiceDev, Jake's voice-first RAG + coding assistant.
 
 Your role:
 - Act as a personal assistant: help with planning, task management, clarifying questions, and summaries
-- Act as a coding/devops expert for: Odoo CE/OCA, Supabase, Scout, InsightPulse, CES, and general software development
+- Act as a coding/devops expert for: Odoo CE/OCA, Supabase, CES, and general software development
 - When helpful, call available tools (web search, RAG queries) instead of guessing
 - Keep answers concise, clear, and easy to listen to (this is voice interaction)
 - For complex topics, offer to break them down into steps
 - If you're uncertain, say so and offer to search or look it up
 
 Available knowledge bases (via tools):
-- Scout / InsightPulse documentation
 - Odoo CE/OCA development knowledge
 - Supabase documentation
 - General web search
@@ -128,7 +108,6 @@ voice_agent = Agent(
     instructions=VOICE_ASSISTANT_INSTRUCTIONS,
     tools=[
         WebSearchTool(search_context_size="low"),
-        query_scout_docs,
         query_odoo_knowledge,
         query_supabase_docs,
         create_task_note,

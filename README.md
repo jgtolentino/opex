@@ -2,7 +2,7 @@
 
 A voice-first AI assistant powered by the OpenAI Agents SDK, combining:
 - **Voice I/O** (speak naturally, get spoken responses)
-- **RAG** (query your Scout/InsightPulse/Odoo/Supabase docs)
+- **RAG** (query your Odoo/Supabase docs)
 - **Coding help** (Odoo CE/OCA, Supabase, general dev)
 - **Personal assistant** (task creation, planning, summaries)
 
@@ -17,10 +17,9 @@ Based on the [OpenAI Agents SDK voice agents cookbook](https://github.com/openai
 
 ### Tools Available
 1. **Web Search** - Real-time web search for current info
-2. **Scout/InsightPulse Docs** - Query your Scout documentation (RAG stub ready)
-3. **Odoo Knowledge** - Search Odoo CE/OCA dev knowledge (RAG stub ready)
-4. **Supabase Docs** - Query Supabase best practices (RAG stub ready)
-5. **Task Creation** - Personal assistant task/note management
+2. **Odoo Knowledge** - Search Odoo CE/OCA dev knowledge (RAG stub ready)
+3. **Supabase Docs** - Query Supabase best practices (RAG stub ready)
+4. **Task Creation** - Personal assistant task/note management
 
 ### Agent Behavior
 - Conversational but concise (optimized for listening)
@@ -86,7 +85,7 @@ python voice_agent.py
 ### Example Queries
 
 **Personal Assistant:**
-- "Create a high priority task to review the Scout analytics dashboard"
+- "Create a high priority task to review the CES analytics dashboard"
 - "Summarize what I should focus on today for the CES project"
 
 **Coding Help:**
@@ -95,8 +94,8 @@ python voice_agent.py
 - "Search the web for the latest Supabase realtime features"
 
 **RAG Queries:**
-- "What does our Scout documentation say about data visualization?"
-- "Look up how InsightPulse handles report generation"
+- "What does our Odoo documentation say about custom module development?"
+- "Look up Supabase best practices for real-time subscriptions"
 
 **General:**
 - "What are the OWASP top 10 for 2024?"
@@ -107,7 +106,6 @@ python voice_agent.py
 ### Wire Up RAG Backends
 
 The script has placeholder functions in `voice_agent.py`:
-- `query_scout_docs()`
 - `query_odoo_knowledge()`
 - `query_supabase_docs()`
 
@@ -115,8 +113,8 @@ Replace the placeholders with actual calls to your Supabase vector search:
 
 ```python
 @function_tool
-def query_scout_docs(query: str) -> str:
-    """Search Scout / InsightPulse documentation."""
+def query_odoo_knowledge(query: str) -> str:
+    """Search Odoo CE/OCA knowledge base."""
     from supabase import create_client
 
     supabase = create_client(
@@ -125,7 +123,7 @@ def query_scout_docs(query: str) -> str:
     )
 
     # Example: call your edge function
-    result = supabase.rpc('search_scout_docs', {'query': query}).execute()
+    result = supabase.rpc('search_odoo_docs', {'query': query}).execute()
 
     # Format and return top results
     docs = result.data[:3]  # top 3 chunks
@@ -147,7 +145,7 @@ voice_agent = Agent(
     # ...
     tools=[
         WebSearchTool(search_context_size="low"),
-        query_scout_docs,
+        query_odoo_knowledge,
         deploy_to_staging,  # Add here
         # ...
     ],
@@ -208,7 +206,7 @@ voice_agent = Agent(
 
 ### Immediate
 1. **Test the basics**: Run `python voice_agent.py` and try a few queries
-2. **Wire up RAG**: Connect `query_scout_docs` to your Supabase vector search
+2. **Wire up RAG**: Connect `query_odoo_knowledge` and `query_supabase_docs` to your Supabase vector search
 3. **Add task backend**: Connect `create_task_note` to your task management system
 
 ### Advanced
