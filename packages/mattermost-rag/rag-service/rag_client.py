@@ -72,9 +72,48 @@ class RAGClient:
 
     async def _supabase_search(self, question: str, limit: int) -> list[dict]:
         """Search Supabase using pgvector similarity."""
-        # TODO: Replace with actual Supabase client when vector search is ready
-        # For now, return empty to trigger fallback
-        return []
+        from supabase import create_client
+
+        try:
+            # Initialize Supabase client
+            supabase = create_client(self.supabase_url, self.supabase_key)
+
+            # Generate embedding for question using OpenAI
+            logger.info("generating_question_embedding", question=question[:100])
+            embedding_response = openai_client.embeddings.create(
+                model="text-embedding-3-small",
+                input=question
+            )
+            query_embedding = embedding_response.data[0].embedding
+
+            # Call match_opex_documents RPC function
+            logger.info("calling_vector_search", limit=limit)
+            result = supabase.rpc(
+                'match_opex_documents',
+                {
+                    'query_embedding': query_embedding,
+                    'match_threshold': 0.7,
+                    'match_count': limit
+                }
+            ).execute()
+
+            # Format results to match expected structure
+            hits = []
+            for doc in result.data:
+                hits.append({
+                    'title': doc['title'] or 'Untitled Document',
+                    'snippet': doc['text'][:500],  # Truncate to 500 chars
+                    'url': f"opex:source:{doc['source_id']}",
+                    'score': doc['similarity']
+                })
+
+            logger.info("vector_search_complete", hits=len(hits))
+            return hits
+
+        except Exception as e:
+            logger.error("vector_search_error", error=str(e))
+            # Return empty to trigger fallback
+            return []
 
     def _get_fallback_context(self, question: str) -> list[dict]:
         """Development fallback context."""

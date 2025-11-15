@@ -25,6 +25,13 @@ services:
         scope: RUN_TIME
         type: SECRET
 
+      # Supabase connection
+      - key: SUPABASE_URL
+        value: "https://ublqmilcjtpnflofprkr.supabase.co"
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        scope: RUN_TIME
+        type: SECRET
+
       # Performance tuning
       - key: MAX_CONCURRENT_REQUESTS
         value: "10"

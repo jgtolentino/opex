@@ -15,6 +15,10 @@ const VS_EXAMPLES_SYSTEMS_ID = Deno.env.get('VS_EXAMPLES_SYSTEMS_ID')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// OpenAI Assistant IDs
+const OPEX_ASSISTANT_ID = 'asst_5KOX6w8iqnQq48JxRGBop06c';
+const PH_TAX_ASSISTANT_ID = 'asst_JZogV16Xpn6OOKNmPcqj79nT';
+
 // System prompts
 const SYSTEM_PROMPTS = {
   'ph-tax-assistant': `You are the "PH Month-End & Tax Copilot" for the Finance team. You assist with Philippine BIR tax compliance and month-end closing tasks. Ground all answers in the RAG knowledge base using file_search. Never answer based only on general knowledge if a relevant document exists.`,
@@ -87,13 +91,10 @@ async function queryAssistant(request: QueryRequest): Promise<QueryResponse> {
       fileSearchConfig.filter = filters;
     }
 
+    const assistantId = request.assistant === 'ph-tax' ? PH_TAX_ASSISTANT_ID : OPEX_ASSISTANT_ID;
+
     const run = await openai.beta.threads.runs.create(thread.id, {
-      model: 'gpt-4-turbo-preview',
-      instructions: getSystemPrompt(request.assistant),
-      tools: [{
-        type: 'file_search',
-        file_search: fileSearchConfig,
-      }],
+      assistant_id: assistantId,
     });
 
     let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
