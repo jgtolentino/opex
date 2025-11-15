@@ -10,6 +10,8 @@ import sys
 import numpy as np
 import sounddevice as sd
 from io import BytesIO
+import json
+from typing import Optional
 
 # Load environment variables from .env file if present
 try:
@@ -22,8 +24,88 @@ from agents import Agent, Runner, function_tool, ModelSettings
 from agents.voice import AudioInput, SingleAgentVoiceWorkflow, VoicePipeline
 from agents.extensions.rag import WebSearchTool
 
+# HTTP client for RAG queries
+try:
+    import requests
+except ImportError:
+    print("Warning: 'requests' library not installed. RAG features will not work.")
+    print("Install with: pip install requests")
+    requests = None
+
 # =============================================================================
-# CUSTOM RAG TOOLS - Wire these to your Supabase backend
+# RAG CLIENT HELPER
+# =============================================================================
+
+def query_opex_rag(
+    question: str,
+    assistant: str = 'opex',
+    domain: Optional[str] = None,
+    process: Optional[str] = None
+) -> str:
+    """
+    Query the OpEx RAG system via Supabase edge function.
+
+    Args:
+        question: The query to search for
+        assistant: 'opex' or 'ph-tax' assistant
+        domain: Optional domain filter (hr, finance, ops, tax, knowledge_base)
+        process: Optional process filter
+
+    Returns:
+        The assistant's answer from RAG knowledge base
+    """
+    if requests is None:
+        return "Error: 'requests' library not installed. Run: pip install requests"
+
+    supabase_url = os.getenv('SUPABASE_URL')
+    if not supabase_url:
+        return "Error: SUPABASE_URL environment variable not set. Check your .env file."
+
+    # Build request payload
+    payload = {
+        'assistant': assistant,
+        'question': question,
+    }
+
+    if domain:
+        payload['domain'] = domain
+    if process:
+        payload['process'] = process
+
+    try:
+        # Call Supabase edge function
+        response = requests.post(
+            f"{supabase_url}/functions/v1/opex-rag-query",
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            timeout=30
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            answer = data.get('answer', 'No answer found')
+
+            # Include citation count if available
+            citations = data.get('citations', [])
+            if citations:
+                answer += f"\n\n(Based on {len(citations)} source(s))"
+
+            return answer
+        else:
+            error_data = response.json() if response.headers.get('content-type') == 'application/json' else {}
+            error_msg = error_data.get('error', f'HTTP {response.status_code}')
+            return f"RAG query failed: {error_msg}"
+
+    except requests.exceptions.Timeout:
+        return "RAG query timed out. The knowledge base might be processing a complex query."
+    except requests.exceptions.ConnectionError:
+        return "Could not connect to RAG backend. Check SUPABASE_URL and network connection."
+    except Exception as e:
+        return f"RAG query error: {str(e)}"
+
+
+# =============================================================================
+# CUSTOM RAG TOOLS - Wired to Supabase backend
 # =============================================================================
 
 @function_tool
@@ -37,12 +119,12 @@ def query_scout_docs(query: str) -> str:
     Returns:
         Relevant documentation snippets or summary
     """
-    # TODO: Replace with actual Supabase RAG call
-    # Example: call your Supabase edge function that does vector search
-    # result = supabase.rpc('search_scout_docs', {'query': query})
-
     print(f"[RAG] Searching Scout docs for: {query}")
-    return f"[RAG placeholder] Found results for Scout docs: '{query}'. Wire this to your Supabase vector search."
+    return query_opex_rag(
+        question=query,
+        assistant='opex',
+        domain='knowledge_base'
+    )
 
 
 @function_tool
@@ -56,9 +138,12 @@ def query_odoo_knowledge(query: str) -> str:
     Returns:
         Relevant Odoo development information
     """
-    # TODO: Wire to your Odoo knowledge base (RAG or API)
     print(f"[RAG] Searching Odoo knowledge for: {query}")
-    return f"[RAG placeholder] Odoo CE/OCA results for: '{query}'. Connect to your knowledge base."
+    return query_opex_rag(
+        question=query,
+        assistant='opex',
+        domain='knowledge_base'
+    )
 
 
 @function_tool
@@ -72,9 +157,12 @@ def query_supabase_docs(query: str) -> str:
     Returns:
         Relevant Supabase documentation or examples
     """
-    # TODO: Wire to Supabase docs RAG
     print(f"[RAG] Searching Supabase docs for: {query}")
-    return f"[RAG placeholder] Supabase docs results for: '{query}'. Connect to your docs backend."
+    return query_opex_rag(
+        question=query,
+        assistant='opex',
+        domain='knowledge_base'
+    )
 
 
 @function_tool
@@ -89,9 +177,37 @@ def create_task_note(task: str, priority: str = "medium") -> str:
     Returns:
         Confirmation of task creation
     """
-    # TODO: Save to your task management system
     print(f"[PA] Creating task [{priority}]: {task}")
-    return f"Task created: '{task}' with priority {priority}. Wire this to your task system."
+
+    # Save to local tasks file
+    tasks_file = os.path.expanduser("~/.jake_voice_tasks.json")
+
+    try:
+        # Load existing tasks
+        if os.path.exists(tasks_file):
+            with open(tasks_file, 'r') as f:
+                tasks = json.load(f)
+        else:
+            tasks = []
+
+        # Add new task with timestamp
+        from datetime import datetime
+        new_task = {
+            'task': task,
+            'priority': priority,
+            'created_at': datetime.now().isoformat(),
+            'completed': False
+        }
+        tasks.append(new_task)
+
+        # Save updated tasks
+        with open(tasks_file, 'w') as f:
+            json.dump(tasks, f, indent=2)
+
+        return f"Task saved: '{task}' with priority {priority}. Total tasks: {len(tasks)}. View at: {tasks_file}"
+
+    except Exception as e:
+        return f"Failed to save task: {str(e)}. Task was: '{task}' (priority: {priority})"
 
 
 # =============================================================================
