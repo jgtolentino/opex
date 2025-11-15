@@ -6,7 +6,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'OpEx Documentation Hub',
-  tagline: 'Comprehensive operational excellence documentation',
+  tagline: 'Your unified source of truth for operational excellence',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -133,7 +133,7 @@ const config: Config = {
           title: 'Documentation',
           items: [
             {
-              label: 'Knowledge Base',
+              label: 'SOP Library',
               to: '/docs/knowledge-base/introduction',
             },
             {
@@ -141,13 +141,21 @@ const config: Config = {
               to: '/docs/hr/overview',
             },
             {
-              label: 'Finance Policies',
+              label: 'Finance Toolkit',
               to: '/docs/finance/overview',
+            },
+            {
+              label: 'Playbooks',
+              to: '/docs/knowledge-base/introduction',
+            },
+            {
+              label: 'Templates',
+              to: '/docs/knowledge-base/introduction',
             },
           ],
         },
         {
-          title: 'Quick Links',
+          title: 'Resources',
           items: [
             {
               label: 'Glossary',
@@ -157,18 +165,34 @@ const config: Config = {
               label: 'FAQ',
               to: '/docs/knowledge-base/faq',
             },
+            {
+              label: 'Onboarding',
+              to: '/docs/knowledge-base/introduction',
+            },
+            {
+              label: 'Submission Request Form',
+              to: '/docs/knowledge-base/introduction',
+            },
           ],
         },
         {
-          title: 'More',
+          title: 'Systems',
           items: [
             {
               label: 'Notion Workspace',
               href: 'https://www.notion.so/team/1db87692-d25c-81b3-9ecf-0042625a31df/join',
             },
             {
-              label: 'Docusaurus',
-              href: 'https://docusaurus.io/',
+              label: 'AI Assistant',
+              to: '/#ai-assistant',
+            },
+            {
+              label: 'RPA/Automation Hub',
+              to: '/docs/knowledge-base/introduction',
+            },
+            {
+              label: 'Governance Console',
+              to: '/docs/knowledge-base/introduction',
             },
           ],
         },

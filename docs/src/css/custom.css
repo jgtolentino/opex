@@ -6,25 +6,48 @@
 
 /* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  /* OpEx Brand Colors - Deep Operational Green */
+  --ifm-color-primary: #0a7a3d;
+  --ifm-color-primary-dark: #096d36;
+  --ifm-color-primary-darker: #086733;
+  --ifm-color-primary-darkest: #07542a;
+  --ifm-color-primary-light: #0b8744;
+  --ifm-color-primary-lighter: #0c8d47;
+  --ifm-color-primary-lightest: #0ea350;
+
+  /* Typography & Spacing */
+  --ifm-font-size-base: 16px;
+  --ifm-spacing-vertical: 1.25rem;
   --ifm-code-font-size: 95%;
+
+  /* Additional Theme Variables */
+  --ifm-background-surface-color: #f8f9fa;
+  --ifm-card-background-color: #ffffff;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
+  --ifm-color-primary: #0ea350;
+  --ifm-color-primary-dark: #0d9248;
+  --ifm-color-primary-darker: #0c8a44;
+  --ifm-color-primary-darkest: #0a7138;
+  --ifm-color-primary-light: #10b458;
+  --ifm-color-primary-lighter: #12bc5c;
+  --ifm-color-primary-lightest: #1fcf68;
+
+  --ifm-background-surface-color: #1b1b1d;
+  --ifm-card-background-color: #242526;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Global Enhancements */
+.hero__title {
+  font-weight: 700;
+}
+
+.hero__subtitle {
+  font-size: 1.25rem;
+  max-width: 700px;
+  margin: 1rem auto;
 }
