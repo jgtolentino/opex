@@ -1,0 +1,175 @@
+# Complete Infrastructure Specification
+# Combined DNS (DigitalOcean) + Supabase configuration
+
+# ============================================================================
+# DNS Configuration (DigitalOcean)
+# ============================================================================
+dns:
+  delete_unmanaged: false
+
+  domains:
+    - name: insightpulseai.net
+      records:
+        # Main application
+        - type: A
+          name: "@"
+          data: "134.209.111.123"
+          ttl: 3600
+
+        - type: A
+          name: "www"
+          data: "134.209.111.123"
+          ttl: 3600
+
+        # Mattermost chat
+        - type: A
+          name: "chat"
+          data: "134.209.111.123"
+          ttl: 3600
+
+        # RAG service
+        - type: A
+          name: "rag"
+          data: "134.209.111.124"
+          ttl: 3600
+
+        # API endpoint
+        - type: A
+          name: "api"
+          data: "134.209.111.125"
+          ttl: 3600
+
+        # ERP system
+        - type: A
+          name: "erp"
+          data: "134.209.111.126"
+          ttl: 3600
+
+        # Authentication service
+        - type: A
+          name: "auth"
+          data: "134.209.111.127"
+          ttl: 3600
+
+        # MCP server
+        - type: A
+          name: "mcp"
+          data: "134.209.111.128"
+          ttl: 3600
+
+        # Email configuration
+        - type: MX
+          name: "@"
+          data: "10 mx1.improvmx.com."
+          ttl: 3600
+
+        - type: MX
+          name: "@"
+          data: "20 mx2.improvmx.com."
+          ttl: 3600
+
+        # SPF record
+        - type: TXT
+          name: "@"
+          data: "v=spf1 include:spf.improvmx.com ~all"
+          ttl: 3600
+
+# ============================================================================
+# Supabase Configuration
+# ============================================================================
+supabase:
+  project_url: "https://ublqmilcjtpnflofprkr.supabase.co"
+  project_ref: "ublqmilcjtpnflofprkr"
+  migrations_dir: "supabase/migrations"
+  functions_dir: "supabase/functions"
+
+  # Database Schema
+  schema:
+    tables:
+      - name: documents
+        columns:
+          - name: id
+            type: uuid
+            primary_key: true
+            default: gen_random_uuid()
+          - name: content
+            type: text
+            nullable: false
+          - name: metadata
+            type: jsonb
+            default: '{}'
+          - name: embedding
+            type: vector(1536)
+          - name: created_at
+            type: timestamptz
+            default: now()
+        rls_enabled: true
+
+      - name: embeddings
+        columns:
+          - name: id
+            type: bigserial
+            primary_key: true
+          - name: document_id
+            type: uuid
+          - name: chunk_index
+            type: integer
+          - name: chunk_text
+            type: text
+          - name: embedding
+            type: vector(1536)
+          - name: metadata
+            type: jsonb
+          - name: created_at
+            type: timestamptz
+            default: now()
+        rls_enabled: true
+
+    indexes:
+      - name: idx_embeddings_vector
+        table: embeddings
+        type: ivfflat
+        column: embedding
+        options: "vector_cosine_ops"
+
+    extensions:
+      - name: vector
+        schema: public
+
+  # RLS Policies
+  rls_policies:
+    - table: documents
+      name: documents_select_policy
+      action: SELECT
+      role: authenticated
+      using: "true"
+
+    - table: embeddings
+      name: embeddings_select_policy
+      action: SELECT
+      role: authenticated
+      using: "true"
+
+  # Edge Functions
+  edge_functions:
+    - name: opex-rag-query
+      verify_deployed: true
+
+    - name: embedding-worker
+      verify_deployed: true
+
+    - name: embedding-maintenance
+      verify_deployed: true
+
+  # Storage Buckets
+  storage_buckets:
+    - name: documents
+      public: false
+      file_size_limit: 52428800
+
+  # Environment Variables (names only)
+  env_vars:
+    - OPENAI_API_KEY
+    - SUPABASE_URL
+    - SUPABASE_SERVICE_ROLE_KEY
+    - DATABASE_URL
