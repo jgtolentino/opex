@@ -1,0 +1,46 @@
+Task Name,Owner,Role,Due Day,SLA,Status,Evidence,BIR Form,Description
+Download Bank Statements,Accounting Staff,Executor,Day 1,2 hours,pending,Bank statement PDFs saved to shared drive,N/A,Download official bank statements for all accounts from online banking portals
+Import Bank Transactions,Finance Supervisor,Responsible,Day 1,4 hours,pending,Transaction import log and reconciliation start balance,N/A,Import bank transactions into ERP system and verify opening balances
+Match Bank Transactions,Finance Supervisor,Responsible,Day 2,1 day,pending,Reconciliation report showing matched/unmatched items,N/A,Match bank transactions with ERP entries and identify discrepancies
+Investigate Unmatched Items,Finance Supervisor,Responsible,Day 2,4 hours,pending,Investigation notes and resolution plan,N/A,Research and resolve unmatched bank transactions
+Approve Bank Reconciliation,Senior Finance Manager,Accountable,Day 2,2 hours,pending,Signed reconciliation report and approval in ERP,N/A,Review and approve bank reconciliation for all accounts
+Generate AP Aging Report,Accounting Staff,Executor,Day 3,2 hours,pending,AP aging report (30/60/90/120 days),N/A,Run accounts payable aging report from ERP
+Reconcile AP Sub-Ledger to GL,Finance Supervisor,Responsible,Day 3,4 hours,pending,AP sub-ledger vs GL reconciliation and variance explanation,N/A,Ensure AP sub-ledger matches general ledger balance
+Review Aged Payables,Finance Supervisor,Responsible,Day 3,3 hours,pending,Aged payables review notes and payment schedule,N/A,Review aged payables and identify overdue invoices and plan payments
+Generate AR Aging Report,Accounting Staff,Executor,Day 4,2 hours,pending,AR aging report (30/60/90/120 days),N/A,Run accounts receivable aging report from ERP
+Reconcile AR Sub-Ledger to GL,Finance Supervisor,Responsible,Day 4,4 hours,pending,AR sub-ledger vs GL reconciliation and variance explanation,N/A,Ensure AR sub-ledger matches general ledger balance
+Review Aged Receivables & Bad Debt,Senior Finance Manager,Accountable,Day 4,3 hours,pending,Aged receivables review and bad debt provision calculation,N/A,Review aged receivables and assess collectability and calculate bad debt provision
+Update Fixed Asset Register,Accounting Staff,Executor,Day 5,3 hours,pending,Updated fixed asset register and addition/disposal records,N/A,Record new asset purchases and disposals and transfers
+Calculate Monthly Depreciation,Finance Supervisor,Responsible,Day 5,4 hours,pending,Depreciation calculation worksheet and expense allocation,N/A,Calculate depreciation expense for all assets using straight-line method
+Post Depreciation Journal Entries,Finance Supervisor,Responsible,Day 6,2 hours,pending,Depreciation JE batch and posting confirmation,N/A,Post depreciation journal entries to general ledger
+Reconcile Fixed Assets Sub-Ledger to GL,Finance Supervisor,Responsible,Day 6,3 hours,pending,Fixed assets sub-ledger vs GL reconciliation,N/A,Ensure fixed assets sub-ledger matches GL balances
+Conduct Physical Inventory Count,Accounting Staff,Executor,Day 7,1 day,pending,Inventory count sheets and variance report,N/A,Perform physical inventory count and record results
+Reconcile Inventory System to Physical Count,Finance Supervisor,Responsible,Day 7,4 hours,pending,Inventory reconciliation report and adjustment list,N/A,Compare system inventory to physical count and identify discrepancies
+Post Inventory Adjustments,Finance Supervisor,Responsible,Day 8,2 hours,pending,Inventory adjustment JEs and approval documentation,N/A,Post journal entries for inventory variances and write-offs
+Calculate Cost of Goods Sold,Finance Supervisor,Responsible,Day 8,3 hours,pending,COGS calculation worksheet and period summary,N/A,Calculate COGS using weighted average or FIFO method
+Prepare Recurring Journal Entries,Finance Supervisor,Responsible,Day 9,3 hours,pending,Recurring JE batch and supporting schedules,N/A,Prepare standard monthly recurring entries (rent and insurance)
+Prepare Accrual Journal Entries,Finance Supervisor,Responsible,Day 9,4 hours,pending,Accrual JE batch and expense recognition schedules,N/A,Prepare accrual entries for expenses incurred but not yet invoiced
+Prepare Prepayment Amortization Entries,Finance Supervisor,Responsible,Day 9,2 hours,pending,Prepayment amortization schedule and JE batch,N/A,Amortize prepaid expenses (insurance and rent and subscriptions)
+Review & Approve All Journal Entries,Senior Finance Manager,Accountable,Day 10,4 hours,pending,Approved JE batches and review notes,N/A,Review all month-end journal entries for accuracy and completeness
+Post All Journal Entries,Finance Supervisor,Responsible,Day 10,2 hours,pending,JE posting confirmation and general ledger update log,N/A,Post all approved journal entries to general ledger
+Extract Withholding Tax Data,Accounting Staff,Executor,Day 10,2 hours,pending,Withholding tax summary report and employee/vendor breakdown,1601-C,Extract compensation withholding tax data from payroll system
+Prepare Form 1601-C,Finance Supervisor,Responsible,Day 10,3 hours,pending,Completed Form 1601-C and supporting schedules,1601-C,Complete BIR Form 1601-C (Monthly Remittance Return of Income Taxes Withheld on Compensation)
+Review & Approve Form 1601-C,Senior Finance Manager,Accountable,Day 10,1 hour,pending,Approved Form 1601-C and review checklist,1601-C,Review Form 1601-C for accuracy before filing
+File Form 1601-C via eFPS,Finance Supervisor,Responsible,Day 10,2 hours,pending,eFPS confirmation receipt and transaction reference number,1601-C,File Form 1601-C electronically via BIR eFPS system (deadline: Day 10)
+Pay Withholding Tax Due,Finance Supervisor,Responsible,Day 10,1 hour,pending,Bank payment confirmation and remittance advice,1601-C,Remit withholding tax to BIR via authorized agent bank
+Generate Trial Balance,Accounting Staff,Executor,Day 11,2 hours,pending,Unadjusted and adjusted trial balance reports,N/A,Run trial balance report after all entries posted
+Prepare Income Statement,Finance Supervisor,Responsible,Day 11,4 hours,pending,Income statement (P&L) and variance analysis vs budget,N/A,Prepare income statement with comparative prior period data
+Prepare Balance Sheet,Finance Supervisor,Responsible,Day 11,4 hours,pending,Balance sheet and equity reconciliation,N/A,Prepare balance sheet with comparative prior period data
+Prepare Cash Flow Statement,Finance Supervisor,Responsible,Day 12,4 hours,pending,Cash flow statement (indirect method),N/A,Prepare statement of cash flows from operating and investing and financing activities
+Prepare Financial Statement Notes,Finance Supervisor,Responsible,Day 12,3 hours,pending,Notes to financial statements and disclosure schedules,N/A,Prepare notes explaining accounting policies and contingencies and commitments
+Perform Financial Statement Review,Senior Finance Manager,Accountable,Day 13,6 hours,pending,Review notes and variance analysis and questions list,N/A,Review financial statements for accuracy and completeness and reasonableness
+Address Review Findings,Finance Supervisor,Responsible,Day 13,4 hours,pending,Resolution notes and correcting entries if needed,N/A,Respond to review questions and make necessary adjustments
+Final Financial Statement Approval,Finance SSC Manager,Accountable,Day 14,2 hours,pending,Signed financial statements and approval memo,N/A,Final approval of financial statements for distribution
+Distribute Financial Statements,Finance Supervisor,Responsible,Day 14,1 hour,pending,Distribution list and email confirmation,N/A,Distribute approved financial statements to stakeholders
+Lock Accounting Period,Senior Finance Manager,Accountable,Day 15,1 hour,pending,Period lock confirmation and system screenshot,N/A,Lock accounting period in ERP to prevent further posting
+Archive Month-End Documentation,Accounting Staff,Executor,Day 15,3 hours,pending,Archive checklist and folder structure confirmation,N/A,Archive all month-end close documentation to shared drive
+Update Close Completion Log,Finance Supervisor,Responsible,Day 15,30 minutes,pending,Completed close log and performance metrics,N/A,Document close completion date and issues encountered and lessons learned
+Prepare Form 2550Q,Finance Supervisor,Responsible,Day 20,4 hours,pending (quarterly only),Completed Form 2550Q and VAT reconciliation,2550Q,Prepare BIR Form 2550Q (Quarterly VAT Return) for Mar/Jun/Sep/Dec
+Review & Approve Form 2550Q,Senior Finance Manager,Accountable,Day 20,2 hours,pending (quarterly only),Approved Form 2550Q and review checklist,2550Q,Review Form 2550Q for accuracy before filing
+File Form 2550Q via eFPS,Finance Supervisor,Responsible,Day 25,2 hours,pending (quarterly only),eFPS confirmation receipt and transaction reference number,2550Q,File Form 2550Q electronically via BIR eFPS (deadline: 25 days after quarter-end)
+Pay Quarterly VAT Due,Finance Supervisor,Responsible,Day 25,1 hour,pending (quarterly only),Bank payment confirmation and remittance advice,2550Q,Remit quarterly VAT to BIR via authorized agent bank

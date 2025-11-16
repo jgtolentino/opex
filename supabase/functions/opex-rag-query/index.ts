@@ -29,7 +29,11 @@ const SYSTEM_PROMPTS = {
 // Initialize clients
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  db: { schema: 'opex' }
+  db: { schema: 'opex' },
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
 });
 
 interface QueryRequest {
@@ -144,28 +148,71 @@ async function logQuery(
   response: QueryResponse | null,
   error: any | null,
 ): Promise<void> {
+  console.log('🔍 logQuery called:', {
+    assistant: request.assistant,
+    question: request.question.substring(0, 50),
+    hasResponse: !!response,
+    hasError: !!error
+  });
+
   const assistantName = request.assistant === 'ph-tax' ? 'ph-tax-assistant' : 'opex-assistant';
 
-  try {
-    await supabase.from('rag_queries').insert({
-      user_id: request.userId || null,
-      user_email: request.userEmail || null,
-      user_role: request.userRole || null,
+  // Prepare simplified payload with meta field for flexibility
+  const insertPayload = {
+    question: request.question,
+    answer: response?.answer || null,
+    user_id: request.userId || null,
+    channel: 'edge-function', // Can be updated for Mattermost integration
+    meta: {
       assistant_name: assistantName,
       assistant_id: response?.metadata.assistantId || null,
-      question: request.question,
-      answer: response?.answer || null,
+      thread_id: response?.metadata.threadId || null,
+      run_id: response?.metadata.runId || null,
+      user_email: request.userEmail || null,
+      user_role: request.userRole || null,
       domain: request.domain || null,
       process: request.process || null,
-      success: error === null,
+      success: !error,
       error_message: error ? (error.message || String(error)) : null,
       response_time_ms: response?.metadata.responseTimeMs || error?.responseTimeMs || null,
-      metadata: request.metadata || {},
       citations: response?.citations || [],
       tokens_used: response?.metadata.tokensUsed || {},
-    });
+      request_metadata: request.metadata || {}
+    }
+  };
+
+  console.log('📤 Inserting to opex.rag_queries:', {
+    question: insertPayload.question.substring(0, 50),
+    hasAnswer: !!insertPayload.answer,
+    userId: insertPayload.user_id
+  });
+
+  try {
+    const { data, error: insertError } = await supabase
+      .from('rag_queries')
+      .insert(insertPayload)
+      .select('id, created_at');
+
+    if (insertError) {
+      console.error('❌ Failed to log query:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint
+      });
+    } else {
+      console.log('✅ Query logged successfully:', {
+        id: data?.[0]?.id,
+        created_at: data?.[0]?.created_at
+      });
+    }
   } catch (logError) {
-    console.error('Failed to log query:', logError);
+    console.error('💥 Exception while logging query:', {
+      error: logError,
+      message: (logError as Error).message,
+      stack: (logError as Error).stack
+    });
+    // Never throw - logging is best-effort
   }
 }
 

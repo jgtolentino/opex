@@ -36,7 +36,7 @@ curl -X POST https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/opex-rag-quer
 ```
 
 **Expected**: JSON response with `answer`, `citations`, `metadata`
-**Failure**: `{"code":"BOOT_ERROR",...}` means code wasn't deployed properly
+**Failure**: `{" code":"BOOT_ERROR",...}` means code wasn't deployed properly
 
 ---
 

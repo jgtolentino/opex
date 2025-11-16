@@ -149,73 +149,32 @@ export function OpExPortal() {
         </div>
       </section>
 
-      {/* Automation Workflows */}
+      {/* AI Assistants */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Automation Workflows</h2>
+        <h2 className={styles.sectionTitle}>AI Assistants</h2>
         <div className={styles.processList}>
-          <a
-            href="https://ipa.insightpulseai.net/workflow"
-            className={styles.processItem}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <Link href="/ask" className={styles.processItem}>
             <div className={styles.processIcon}>🤖</div>
             <div className={styles.processContent}>
-              <h4 className={styles.processTitle}>Ask OpEx Assistant (via Mattermost)</h4>
+              <h4 className={styles.processTitle}>Ask OpEx Assistant</h4>
               <p className={styles.processDescription}>
-                Use /opex slash command in Mattermost to query HR/Finance policies and BIR tax regulations
+                AI-powered chat for HR, Finance, and operational policies and workflows
               </p>
             </div>
             <span className={styles.processArrow}>→</span>
-          </a>
+          </Link>
 
-          <a
-            href="https://ipa.insightpulseai.net/workflow"
-            className={styles.processItem}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div className={styles.processIcon}>⏰</div>
+          <Link href="/ask-tax" className={styles.processItem}>
+            <div className={styles.processIcon}>💼</div>
             <div className={styles.processContent}>
-              <h4 className={styles.processTitle}>Tax Deadline Notifier</h4>
+              <h4 className={styles.processTitle}>PH Tax Assistant</h4>
               <p className={styles.processDescription}>
-                Automated BIR deadline reminders for 1601-C, 2550Q, and other tax forms across all agencies
+                BIR compliance, tax deadlines, Form 1601-C, 2550Q, and month-end closing guidance
               </p>
             </div>
             <span className={styles.processArrow}>→</span>
-          </a>
+          </Link>
 
-          <a
-            href="https://ipa.insightpulseai.net/workflow"
-            className={styles.processItem}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div className={styles.processIcon}>🏥</div>
-            <div className={styles.processContent}>
-              <h4 className={styles.processTitle}>Service Health Monitor</h4>
-              <p className={styles.processDescription}>
-                Continuous monitoring of MCP, ERP, OCR services with automated Mattermost alerts
-              </p>
-            </div>
-            <span className={styles.processArrow}>→</span>
-          </a>
-
-          <a
-            href="https://ipa.insightpulseai.net/workflow"
-            className={styles.processItem}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div className={styles.processIcon}>📚</div>
-            <div className={styles.processContent}>
-              <h4 className={styles.processTitle}>BIR Document Sync</h4>
-              <p className={styles.processDescription}>
-                Automatic discovery and ingestion of new BIR documents into the RAG knowledge base
-              </p>
-            </div>
-            <span className={styles.processArrow}>→</span>
-          </a>
         </div>
       </section>
 

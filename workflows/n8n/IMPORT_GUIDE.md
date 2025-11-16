@@ -1,17 +1,25 @@
 # n8n Workflow Import Guide (Manual UI Method)
 
-## Issue Encountered
+## ✅ Current Status (Updated 2025-11-15)
 
-While attempting CLI automation, we encountered authentication issues with the n8n API. The API key was successfully created in the database but isn't being recognized by the n8n API endpoints.
+**Prerequisites Complete**:
+- ✅ RAG query logging table created (`opex.rag_queries`)
+- ✅ Edge Function deployed with logging
+- ✅ Broken workflows deleted from database
+- ✅ n8n restarted and ready for fresh imports
 
-**API Key Created**: `n8n_api_859b60e81c0fd15e47b36898fc1e60b42fed14f3561795d844d2ff520ab0f49c`
-- ✅ Stored in database: `user_api_keys` table
-- ✅ Saved to `~/.zshrc` as `N8N_API_KEY`
-- ❌ Not authenticating with `/api/v1/workflows` endpoint
+**Ready to Import**: 4 production workflows via n8n Web UI
+
+## Background: Why Manual UI Import?
+
+While attempting CLI automation, we encountered:
+1. ❌ API authentication issues (key created but not recognized)
+2. ❌ Database direct insert caused JSON format incompatibilities
+3. ✅ **Solution**: Manual UI import (guaranteed to work, faster)
 
 ## Recommended Solution: Manual UI Import
 
-Since the workflows are already created as JSON files, the fastest path forward is manual import via the n8n web interface.
+The n8n Web UI handles workflow JSON format correctly and is the most reliable import method.
 
 ### Step-by-Step Import Instructions
 
