@@ -68,7 +68,7 @@ Days Remaining: 5
 
 **Features**:
 - Monitors 4 critical services (MCP, ERP, OCR, n8n)
-- Response time tracking (<500ms threshold)
+- Response time tracking (&lt;500ms threshold)
 - Automatic Mattermost alerts
 - Optional GitHub issue creation
 

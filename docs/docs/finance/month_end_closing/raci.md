@@ -242,8 +242,8 @@
 - Team utilization rate: Target 80-90%
 
 **Senior Finance Manager**:
-- Review turnaround time: Target <4 hours
-- Error detection rate: Target >95%
+- Review turnaround time: Target &lt;4 hours
+- Error detection rate: Target &gt;95%
 - Approval accuracy: Target 100%
 - Team development metrics: Training hours, skill assessments
 
@@ -254,10 +254,10 @@
 - Documentation completeness: Target 100%
 
 **Accounting Staff**:
-- Data entry accuracy: Target >99%
+- Data entry accuracy: Target &gt;99%
 - Report generation timeliness: Target 100%
 - Document archiving completeness: Target 100%
-- Support responsiveness: Target <2 hours
+- Support responsiveness: Target &lt;2 hours
 
 ---
 
