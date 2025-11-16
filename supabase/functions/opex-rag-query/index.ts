@@ -26,6 +26,10 @@ const SYSTEM_PROMPTS = {
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   db: { schema: 'opex' },
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
 });
 
 interface QueryRequest {
@@ -56,12 +60,13 @@ interface QueryResponse {
 }
 
 function getSystemPrompt(assistant: string): string {
-  const assistantKey = assistant === 'ph-tax' ? 'ph-tax-assistant' : 'opex-assistant';
+  const assistantKey =
+    assistant === 'ph-tax' ? 'ph-tax-assistant' : 'opex-assistant';
   return SYSTEM_PROMPTS[assistantKey] || SYSTEM_PROMPTS['opex-assistant'];
 }
 
 function buildFileSearchFilters(domain?: string, process?: string): any {
-  const filters: any = {};
+  const filters: Record<string, string> = {};
   if (domain) filters.domain = domain;
   if (process) filters.process = process;
   return Object.keys(filters).length > 0 ? filters : undefined;
@@ -79,7 +84,11 @@ async function queryAssistant(request: QueryRequest): Promise<QueryResponse> {
     });
 
     const fileSearchConfig: any = {
-      vector_store_ids: [VS_POLICIES_ID, VS_SOPS_WORKFLOWS_ID, VS_EXAMPLES_SYSTEMS_ID],
+      vector_store_ids: [
+        VS_POLICIES_ID,
+        VS_SOPS_WORKFLOWS_ID,
+        VS_EXAMPLES_SYSTEMS_ID,
+      ],
     };
 
     const filters = buildFileSearchFilters(request.domain, request.process);
@@ -99,7 +108,10 @@ async function queryAssistant(request: QueryRequest): Promise<QueryResponse> {
     });
 
     let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-    while (runStatus.status === 'queued' || runStatus.status === 'in_progress') {
+    while (
+      runStatus.status === 'queued' ||
+      runStatus.status === 'in_progress'
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
     }
@@ -109,7 +121,9 @@ async function queryAssistant(request: QueryRequest): Promise<QueryResponse> {
     }
 
     const messages = await openai.beta.threads.messages.list(thread.id);
-    const assistantMessage = messages.data.find((msg) => msg.role === 'assistant');
+    const assistantMessage = messages.data.find(
+      (msg) => msg.role === 'assistant',
+    );
 
     if (!assistantMessage || assistantMessage.content[0]?.type !== 'text') {
       throw new Error('No valid response from assistant');
@@ -123,6 +137,7 @@ async function queryAssistant(request: QueryRequest): Promise<QueryResponse> {
       answer,
       citations,
       metadata: {
+        // assistant_id is not guaranteed in model+tools mode, so we keep it best-effort
         assistantId: (run as any).assistant_id || '',
         threadId: thread.id,
         runId: run.id,
@@ -147,7 +162,8 @@ async function logQuery(
   response: QueryResponse | null,
   error: any | null,
 ): Promise<void> {
-  const assistantName = request.assistant === 'ph-tax' ? 'ph-tax-assistant' : 'opex-assistant';
+  const assistantName =
+    request.assistant === 'ph-tax' ? 'ph-tax-assistant' : 'opex-assistant';
 
   try {
     await supabase.from('rag_queries').insert({
@@ -162,10 +178,12 @@ async function logQuery(
       process: request.process || null,
       success: error === null,
       error_message: error ? (error.message || String(error)) : null,
-      response_time_ms: response?.metadata.responseTimeMs || error?.responseTimeMs || null,
+      response_time_ms:
+        response?.metadata.responseTimeMs || error?.responseTimeMs || null,
       metadata: request.metadata || {},
       citations: response?.citations || [],
       tokens_used: response?.metadata.tokensUsed || {},
+      // rating, feedback, evaluation_metadata are managed by rag-feedback
     });
   } catch (logError) {
     console.error('Failed to log query:', logError);
@@ -178,7 +196,8 @@ serve(async (req) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Headers':
+          'authorization, x-client-info, apikey, content-type',
       },
     });
   }
@@ -188,7 +207,9 @@ serve(async (req) => {
 
     if (!request.assistant || !['opex', 'ph-tax'].includes(request.assistant)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid assistant. Must be "opex" or "ph-tax"' }),
+        JSON.stringify({
+          error: 'Invalid assistant. Must be "opex" or "ph-tax"',
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
@@ -231,7 +252,9 @@ serve(async (req) => {
   } catch (error) {
     console.error('Handler error:', error);
     return new Response(
-      JSON.stringify({ error: (error as Error).message || 'Internal server error' }),
+      JSON.stringify({
+        error: (error as Error).message || 'Internal server error',
+      }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
