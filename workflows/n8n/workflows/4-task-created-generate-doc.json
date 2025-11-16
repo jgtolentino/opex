@@ -1,0 +1,354 @@
+{
+  "name": "Task Created → Generate Doc Page",
+  "nodes": [
+    {
+      "id": "Webhook_TaskCreated",
+      "name": "New Task Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "task-created-generate-doc",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "task-created-generate-doc",
+      "notes": "Configure in task system:\n- GitHub: Webhook for 'issues' event (labeled 'spec-needed')\n- Jira: Webhook for 'issue_created' (issue type = Epic)\n- ClickUp: Webhook for 'taskCreated' (with tag 'spec-needed')"
+    },
+    {
+      "id": "If_NeedsDoc",
+      "name": "Needs Doc?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [540, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.labels?.map(l => l.name).join(',') || '' }}",
+              "operation": "contains",
+              "value2": "spec-needed"
+            }
+          ]
+        },
+        "combineOperation": "any"
+      },
+      "notes": "Checks for:\n- Label: 'spec-needed'\n- OR Issue type: 'Epic'\n- OR Tag: 'needs-doc'"
+    },
+    {
+      "id": "Set_DocMetadata",
+      "name": "Extract Task Metadata",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [820, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "task_id",
+              "value": "={{ $json.id || $json.key }}"
+            },
+            {
+              "name": "task_url",
+              "value": "={{ $json.html_url || $json.url || $json.web_url }}"
+            },
+            {
+              "name": "task_title",
+              "value": "={{ $json.title || $json.summary || $json.name }}"
+            },
+            {
+              "name": "task_assignee",
+              "value": "={{ $json.assignee?.name || $json.assignees?.[0]?.name || 'Unassigned' }}"
+            },
+            {
+              "name": "task_created_at",
+              "value": "={{ $json.created_at || $now.toISO() }}"
+            },
+            {
+              "name": "task_type",
+              "value": "={{ $json.type || 'feature' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Notion_CreateDocPage",
+      "name": "Create Spec Page in Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "create",
+        "databaseId": "YOUR_SPECS_DATABASE_ID_HERE",
+        "title": "={{ $json.task_title }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Type",
+              "selectValue": "Spec"
+            },
+            {
+              "key": "Status",
+              "selectValue": "Draft"
+            },
+            {
+              "key": "Owner",
+              "textContent": "={{ $json.task_assignee }}"
+            },
+            {
+              "key": "Source Task",
+              "urlContent": "={{ $json.task_url }}"
+            },
+            {
+              "key": "Task ID",
+              "textContent": "={{ $json.task_id }}"
+            },
+            {
+              "key": "Created From",
+              "selectValue": "Task (Auto)"
+            }
+          ]
+        },
+        "blockUi": {
+          "blockValues": [
+            {
+              "type": "heading_1",
+              "richText": false,
+              "textContent": "Context"
+            },
+            {
+              "type": "paragraph",
+              "richText": false,
+              "textContent": "Provide background and problem statement here."
+            },
+            {
+              "type": "heading_1",
+              "richText": false,
+              "textContent": "Requirements"
+            },
+            {
+              "type": "bulleted_list_item",
+              "richText": false,
+              "textContent": "Functional requirement 1"
+            },
+            {
+              "type": "bulleted_list_item",
+              "richText": false,
+              "textContent": "Functional requirement 2"
+            },
+            {
+              "type": "heading_1",
+              "richText": false,
+              "textContent": "Open Questions"
+            },
+            {
+              "type": "bulleted_list_item",
+              "richText": false,
+              "textContent": "Question 1?"
+            },
+            {
+              "type": "heading_1",
+              "richText": false,
+              "textContent": "Acceptance Criteria"
+            },
+            {
+              "type": "to_do",
+              "richText": false,
+              "textContent": "Criterion 1"
+            },
+            {
+              "type": "to_do",
+              "richText": false,
+              "textContent": "Criterion 2"
+            },
+            {
+              "type": "heading_1",
+              "richText": false,
+              "textContent": "Links"
+            },
+            {
+              "type": "paragraph",
+              "richText": true,
+              "textContent": "**Source Task**: [{{ $json.task_id }}]({{ $json.task_url }})"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Creates a structured spec template"
+    },
+    {
+      "id": "HTTP_UpdateTaskWithDocLink",
+      "name": "Add Doc Link to Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1380, 300],
+      "parameters": {
+        "url": "YOUR_TASK_SYSTEM_API_URL/tasks/{{ $('Set_DocMetadata').item.json.task_id }}/comment",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "📄 **Spec document created**\\n\\n[View Spec in Notion]({{ $json.url }})\\n\\nThe spec page has been auto-generated with sections for Context, Requirements, Open Questions, Acceptance Criteria, and Links. Please review and fill in the details."
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "REPLACE WITH:\n- GitHub: Create comment node\n- Jira: Add comment node\n- ClickUp: Create comment node"
+    },
+    {
+      "id": "Webhook_Response",
+      "name": "Send Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1660, 300],
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, notion_page_url: $('Notion_CreateDocPage').item.json.url, task_id: $('Set_DocMetadata').item.json.task_id } }}"
+      }
+    },
+    {
+      "id": "Mattermost_Notify",
+      "name": "Notify Team (Optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1660, 480],
+      "parameters": {
+        "url": "={{ $env.MATTERMOST_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "specs"
+            },
+            {
+              "name": "text",
+              "value": "📝 **New spec page auto-generated**\\n\\n**Task**: [{{ $('Set_DocMetadata').item.json.task_id }}]({{ $('Set_DocMetadata').item.json.task_url }})\\n**Spec**: [{{ $('Set_DocMetadata').item.json.task_title }}]({{ $('Notion_CreateDocPage').item.json.url }})\\n**Owner**: {{ $('Set_DocMetadata').item.json.task_assignee }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "NoOp_SkipDoc",
+      "name": "Skip (No Doc Needed)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [820, 480],
+      "notes": "Task doesn't have 'spec-needed' label"
+    }
+  ],
+  "connections": {
+    "Webhook_TaskCreated": {
+      "main": [
+        [
+          {
+            "node": "If_NeedsDoc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_NeedsDoc": {
+      "main": [
+        [
+          {
+            "node": "Set_DocMetadata",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp_SkipDoc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_DocMetadata": {
+      "main": [
+        [
+          {
+            "node": "Notion_CreateDocPage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_CreateDocPage": {
+      "main": [
+        [
+          {
+            "node": "HTTP_UpdateTaskWithDocLink",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mattermost_Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_UpdateTaskWithDocLink": {
+      "main": [
+        [
+          {
+            "node": "Webhook_Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "1",
+      "name": "notion-sync"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}

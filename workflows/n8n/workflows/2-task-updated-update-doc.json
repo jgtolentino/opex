@@ -1,0 +1,260 @@
+{
+  "name": "Task Updated → Update Notion Doc",
+  "nodes": [
+    {
+      "id": "Webhook_TaskUpdated",
+      "name": "Task System Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "task-updated",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "task-updated-webhook"
+    },
+    {
+      "id": "Set_ParsePayload",
+      "name": "Parse Task Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [540, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "task_id",
+              "value": "={{ $json.id || $json.task_id || $json.issue?.id }}"
+            },
+            {
+              "name": "task_status",
+              "value": "={{ $json.status || $json.state || $json.issue?.state }}"
+            },
+            {
+              "name": "task_assignee",
+              "value": "={{ $json.assignee?.name || $json.assignees?.[0]?.name || 'Unassigned' }}"
+            },
+            {
+              "name": "task_completed_at",
+              "value": "={{ $json.completed_at || $json.closed_at || '' }}"
+            },
+            {
+              "name": "notion_page_id",
+              "value": "={{ $json.metadata?.notion_page_id || '' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "If_HasNotionPageId",
+      "name": "Has Notion Link?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [820, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.notion_page_id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Notion_SearchByTaskId",
+      "name": "Find Doc by Task ID",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [820, 480],
+      "parameters": {
+        "resource": "database",
+        "operation": "search",
+        "databaseId": "YOUR_DOCS_DATABASE_ID_HERE",
+        "filterType": "manual",
+        "matchType": "anyFilter",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Task ID",
+              "condition": "equals",
+              "returnType": "text",
+              "value": "={{ $json.task_id }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Fallback if notion_page_id not in payload"
+    },
+    {
+      "id": "Set_StatusMapping",
+      "name": "Map Task → Doc Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1100, 300],
+      "parameters": {
+        "jsCode": "// Map task status to Notion doc status\nconst taskStatus = $input.item.json.task_status.toLowerCase();\n\nconst statusMap = {\n  'open': 'Draft',\n  'todo': 'Draft',\n  'in_progress': 'In Review',\n  'in progress': 'In Review',\n  'review': 'In Review',\n  'done': 'Completed',\n  'closed': 'Completed',\n  'completed': 'Completed',\n  'archived': 'Archived'\n};\n\nconst notionStatus = statusMap[taskStatus] || 'Draft';\n\nreturn {\n  json: {\n    ...($input.item.json),\n    notion_status: notionStatus,\n    last_updated_from_task: new Date().toISOString()\n  }\n};"
+      }
+    },
+    {
+      "id": "Notion_UpdatePage",
+      "name": "Update Doc Status",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1380, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "update",
+        "pageId": "={{ $json.notion_page_id || $('Notion_SearchByTaskId').item.json.results[0].id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status",
+              "selectValue": "={{ $json.notion_status }}"
+            },
+            {
+              "key": "Task Status",
+              "textContent": "={{ $json.task_status }}"
+            },
+            {
+              "key": "Last Synced",
+              "dateValue": "={{ $json.last_updated_from_task }}"
+            },
+            {
+              "key": "Assignee",
+              "textContent": "={{ $json.task_assignee }}"
+            }
+          ]
+        },
+        "blockUi": {
+          "blockValues": [
+            {
+              "type": "paragraph",
+              "richText": true,
+              "textContent": "**Sync Update** ({{ $json.last_updated_from_task }}): Task status changed to `{{ $json.task_status }}`"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Appends a changelog paragraph to the doc"
+    },
+    {
+      "id": "Webhook_Response",
+      "name": "Send Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1660, 300],
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, updated_page_id: $json.id, notion_status: $('Set_StatusMapping').item.json.notion_status } }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook_TaskUpdated": {
+      "main": [
+        [
+          {
+            "node": "Set_ParsePayload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_ParsePayload": {
+      "main": [
+        [
+          {
+            "node": "If_HasNotionPageId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_HasNotionPageId": {
+      "main": [
+        [
+          {
+            "node": "Set_StatusMapping",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notion_SearchByTaskId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_SearchByTaskId": {
+      "main": [
+        [
+          {
+            "node": "Set_StatusMapping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_StatusMapping": {
+      "main": [
+        [
+          {
+            "node": "Notion_UpdatePage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_UpdatePage": {
+      "main": [
+        [
+          {
+            "node": "Webhook_Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "1",
+      "name": "notion-sync"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}

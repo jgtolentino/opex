@@ -1,0 +1,368 @@
+{
+  "name": "Daily Docs Review Queue (Find Missing Tasks)",
+  "nodes": [
+    {
+      "id": "Cron_Daily9AM",
+      "name": "Daily Trigger (9 AM)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 9,
+              "minute": 0
+            }
+          ]
+        },
+        "timezone": "Asia/Manila"
+      }
+    },
+    {
+      "id": "Notion_QueryDocsDatabase",
+      "name": "Get Docs Missing Tasks",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [540, 300],
+      "parameters": {
+        "resource": "database",
+        "operation": "getAll",
+        "databaseId": "YOUR_DOCS_DATABASE_ID_HERE",
+        "returnAll": false,
+        "limit": 50,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Task Link",
+              "condition": "isEmpty"
+            },
+            {
+              "key": "Status",
+              "condition": "equals",
+              "returnType": "select",
+              "value": "Needs Implementation"
+            }
+          ]
+        },
+        "sort": {
+          "sortValue": [
+            {
+              "key": "Created Time",
+              "direction": "descending"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Finds docs that:\n1. Have no Task Link\n2. Status = 'Needs Implementation'"
+    },
+    {
+      "id": "SplitInBatches",
+      "name": "Process Docs One by One",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [820, 300],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "Set_PrepareTaskData",
+      "name": "Prepare Task Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1100, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "task_title",
+              "value": "📄 Implement: {{ $json.properties.Name.title[0].plain_text }}"
+            },
+            {
+              "name": "task_description",
+              "value": "**Auto-generated task from daily docs review**\\n\\nDoc page: {{ $json.url }}\\n\\nType: {{ $json.properties.Type?.select?.name || 'general' }}\\nPriority: {{ $json.properties.Priority?.select?.name || 'medium' }}\\n\\nAction needed: Review this doc and implement/assign ownership."
+            },
+            {
+              "name": "task_assignee",
+              "value": "={{ $json.properties.Owner?.people[0]?.name || 'team-lead' }}"
+            },
+            {
+              "name": "notion_page_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "notion_url",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "name": "priority",
+              "value": "={{ $json.properties.Priority?.select?.name || 'medium' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "HTTP_CreateTask",
+      "name": "Create Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1380, 300],
+      "parameters": {
+        "url": "YOUR_TASK_SYSTEM_API_URL/tasks",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json.task_title }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $json.task_description }}"
+            },
+            {
+              "name": "assignee",
+              "value": "={{ $json.task_assignee }}"
+            },
+            {
+              "name": "priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "labels",
+              "value": "=['needs-review', 'auto-generated', 'from-doc']"
+            },
+            {
+              "name": "metadata",
+              "value": "={{ { notion_page_id: $json.notion_page_id, source: 'daily_review_queue' } }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "REPLACE WITH GitHub/ClickUp/Jira node"
+    },
+    {
+      "id": "Notion_UpdatePageWithTask",
+      "name": "Link Task to Doc",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1660, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "update",
+        "pageId": "={{ $('Set_PrepareTaskData').item.json.notion_page_id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Task Link",
+              "textContent": "={{ $json.url || $json.html_url }}"
+            },
+            {
+              "key": "Task ID",
+              "textContent": "={{ $json.id || $json.key }}"
+            },
+            {
+              "key": "Status",
+              "selectValue": "In Progress"
+            },
+            {
+              "key": "Auto-created",
+              "dateValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "id": "Wait_RateLimit",
+      "name": "Wait (Rate Limiting)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1940, 300],
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "notes": "Prevents API rate limiting"
+    },
+    {
+      "id": "Set_Summary",
+      "name": "Build Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [820, 480],
+      "parameters": {
+        "jsCode": "const docs = $input.all();\n\nif (docs.length === 0) {\n  return {\n    json: {\n      message: '✅ No docs need tasks today.',\n      count: 0\n    }\n  };\n}\n\nconst summary = docs.map(doc => {\n  const title = doc.json.properties.Name.title[0].plain_text;\n  const url = doc.json.url;\n  const owner = doc.json.properties.Owner?.people[0]?.name || 'Unassigned';\n  return `- [${title}](${url}) - Owner: ${owner}`;\n}).join('\\n');\n\nreturn {\n  json: {\n    message: `📋 **Daily Review Queue**: ${docs.length} docs need tasks`,\n    summary: summary,\n    count: docs.length\n  }\n};"
+      }
+    },
+    {
+      "id": "Mattermost_NotifySummary",
+      "name": "Post Summary to Mattermost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1100, 480],
+      "parameters": {
+        "url": "={{ $env.MATTERMOST_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "tasks"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}\\n\\n{{ $json.summary || '' }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Posts summary before processing starts"
+    }
+  ],
+  "connections": {
+    "Cron_Daily9AM": {
+      "main": [
+        [
+          {
+            "node": "Notion_QueryDocsDatabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_QueryDocsDatabase": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set_Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "Set_PrepareTaskData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_PrepareTaskData": {
+      "main": [
+        [
+          {
+            "node": "HTTP_CreateTask",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_CreateTask": {
+      "main": [
+        [
+          {
+            "node": "Notion_UpdatePageWithTask",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_UpdatePageWithTask": {
+      "main": [
+        [
+          {
+            "node": "Wait_RateLimit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait_RateLimit": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_Summary": {
+      "main": [
+        [
+          {
+            "node": "Mattermost_NotifySummary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "1",
+      "name": "notion-sync"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}
