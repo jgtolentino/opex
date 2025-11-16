@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { NotionPage } from '@/components/NotionPage'
+
 import OpExChat from '@/components/OpExChat'
 
 export default function AskPage() {

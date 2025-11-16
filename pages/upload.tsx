@@ -1,8 +1,8 @@
-import { withPageAuthRequired } from '@auth0/nextjs-auth0/client'
-import { useUser } from '@auth0/nextjs-auth0/client'
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import Head from 'next/head'
+
+import { useUser, withPageAuthRequired } from '@auth0/nextjs-auth0/client'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -20,10 +20,8 @@ interface UploadedFile {
 function UploadPage() {
   const { user } = useUser()
   const [files, setFiles] = useState<UploadedFile[]>([])
-  const [isUploading, setIsUploading] = useState(false)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    setIsUploading(true)
 
     for (const file of acceptedFiles) {
       const uploadedFile: UploadedFile = {
@@ -41,7 +39,7 @@ function UploadPage() {
         formData.append('userId', user?.sub || 'anonymous')
         formData.append('userEmail', user?.email || '')
 
-        const { data, error } = await supabase.functions.invoke('ingest-document', {
+        const { error } = await supabase.functions.invoke('ingest-document', {
           body: formData,
         })
 
@@ -52,19 +50,17 @@ function UploadPage() {
             f.name === file.name ? { ...f, status: 'completed' } : f
           )
         )
-      } catch (error: any) {
-        console.error('Upload error:', error)
+      } catch (err) {
+        console.error('Upload error:', err)
         setFiles((prev) =>
           prev.map((f) =>
             f.name === file.name
-              ? { ...f, status: 'error', error: error.message || 'Upload failed' }
+              ? { ...f, status: 'error', error: (err as Error).message || 'Upload failed' }
               : f
           )
         )
       }
     }
-
-    setIsUploading(false)
   }, [user])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
