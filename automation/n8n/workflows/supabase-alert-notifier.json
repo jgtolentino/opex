@@ -1,0 +1,269 @@
+{
+  "name": "Supabase Alert Notifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook/supabase-alert",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "supabase-alert"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "source",
+              "value": "={{ $json.source || 'unknown' }}"
+            },
+            {
+              "name": "level",
+              "value": "={{ $json.level || 'info' }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.text || 'No message provided' }}"
+            },
+            {
+              "name": "context",
+              "value": "={{ JSON.stringify($json.context || {}) }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-fields",
+      "name": "Extract Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/alert-notifier",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"source\": $json.source,\n  \"level\": $json.level,\n  \"text\": $json.text,\n  \"context\": JSON.parse($json.context)\n}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": {
+            "timeout": 10000
+          }
+        }
+      },
+      "id": "call-supabase-function",
+      "name": "Call Supabase Edge Function",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-opex",
+          "name": "Supabase OpEx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": "200",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-response",
+      "name": "Check Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  \"success\": true,\n  \"message\": \"Alert sent successfully\",\n  \"timestamp\": $json.timestamp\n}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 502,
+        "responseBody": "={{ JSON.stringify({\n  \"success\": false,\n  \"error\": \"Failed to send alert\",\n  \"details\": $json.body?.error || 'Unknown error',\n  \"timestamp\": $json.timestamp\n}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO opex.workflow_logs (workflow_name, status, payload, response, created_at)\nVALUES (\n  'supabase-alert-notifier',\n  '{{ $json.success ? 'success' : 'error' }}',\n  '{{ $json.payload }}',\n  '{{ JSON.stringify($json.response || {}) }}',\n  NOW()\n)",
+        "options": {}
+      },
+      "id": "log-execution",
+      "name": "Log Execution",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [850, 500],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Fields": {
+      "main": [
+        [
+          {
+            "node": "Call Supabase Edge Function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Supabase Edge Function": {
+      "main": [
+        [
+          {
+            "node": "Check Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Response": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Execution",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "Asia/Manila"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "alert-workflows",
+      "name": "Alert Workflows"
+    },
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "supabase-integration",
+      "name": "Supabase Integration"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}

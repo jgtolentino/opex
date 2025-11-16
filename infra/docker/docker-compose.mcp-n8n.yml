@@ -1,0 +1,121 @@
+# docker-compose.mcp-n8n.yml
+# OpEx Docker Infrastructure - MCP + n8n
+#
+# Services:
+# - mcp-coordinator: Model Context Protocol coordinator (mcp.insightpulseai.net)
+# - n8n: Workflow automation engine (n8n.insightpulseai.net)
+#
+# Prerequisites:
+# - Traefik reverse proxy running with LetsEncrypt
+# - DNS records for mcp.insightpulseai.net and n8n.insightpulseai.net
+# - Environment files: env/mcp.env, env/n8n.env
+#
+# Usage:
+#   docker-compose -f docker-compose.mcp-n8n.yml up -d
+
+version: '3.8'
+
+networks:
+  proxy:
+    external: true
+    name: traefik_proxy
+  internal:
+    driver: bridge
+
+volumes:
+  n8n_data:
+    driver: local
+  mcp_data:
+    driver: local
+
+services:
+  # ========================================================================
+  # MCP Coordinator
+  # ========================================================================
+  mcp-coordinator:
+    image: mcp/coordinator:latest
+    container_name: mcp-coordinator
+    restart: unless-stopped
+    networks:
+      - proxy
+      - internal
+    env_file:
+      - ./env/mcp.env
+    environment:
+      - TZ=Asia/Manila
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+    volumes:
+      - mcp_data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+
+      # HTTP router
+      - "traefik.http.routers.mcp.rule=Host(`mcp.insightpulseai.net`)"
+      - "traefik.http.routers.mcp.entrypoints=websecure"
+      - "traefik.http.routers.mcp.tls=true"
+      - "traefik.http.routers.mcp.tls.certresolver=letsencrypt"
+
+      # Service
+      - "traefik.http.services.mcp.loadbalancer.server.port=3000"
+
+      # Middleware
+      - "traefik.http.routers.mcp.middlewares=mcp-headers"
+      - "traefik.http.middlewares.mcp-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ========================================================================
+  # n8n Workflow Automation
+  # ========================================================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    networks:
+      - proxy
+      - internal
+    env_file:
+      - ./env/n8n.env
+    environment:
+      - TZ=Asia/Manila
+      - N8N_HOST=n8n.insightpulseai.net
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.insightpulseai.net/
+      - GENERIC_TIMEZONE=Asia/Manila
+      - N8N_LOG_LEVEL=info
+      - N8N_LOG_OUTPUT=console
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+
+      # HTTP router
+      - "traefik.http.routers.n8n.rule=Host(`n8n.insightpulseai.net`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls=true"
+      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
+
+      # Service
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+      # Middleware
+      - "traefik.http.routers.n8n.middlewares=n8n-headers"
+      - "traefik.http.middlewares.n8n-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
