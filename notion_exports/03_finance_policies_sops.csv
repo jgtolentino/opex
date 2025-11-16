@@ -1,0 +1,16 @@
+Policy/SOP Name,Category,Link to Markdown,Primary Owner,Review Frequency,Description
+Month-End Close Policy,Financial Reporting,docs/finance/month_end_closing/README.md,Finance SSC Manager,Quarterly,Standardized month-end close process within 12 business days for all agencies
+BIR Tax Filing Policy,Tax Compliance,docs/finance/month_end_closing/bir_schedule.md,Senior Finance Manager,Quarterly,100% on-time BIR form filing with complete documentation and payment remittance
+Bank Reconciliation Policy,Cash Management,docs/finance/month_end_closing/tasks.md#bank-reconciliation,Finance Supervisor,Monthly,Monthly bank account reconciliation with 100% accuracy within 2 business days
+Accounts Payable & Receivable Policy,Working Capital Management,docs/finance/month_end_closing/tasks.md#apAR-reconciliation,Finance Supervisor,Monthly,AP and AR sub-ledger reconciliation to GL with aging analysis within 4 business days
+Fixed Assets & Depreciation Policy,Asset Management,docs/finance/month_end_closing/tasks.md#fixed-assets-depreciation,Finance Supervisor,Quarterly,Asset register maintenance with straight-line depreciation per BIR guidelines
+Journal Entry Policy,General Accounting,docs/finance/month_end_closing/tasks.md#journal-entries-accruals,Finance Supervisor,Monthly,Documented and approved JEs with maximum 2-day posting lag
+Financial Statement Policy,Financial Reporting,docs/finance/month_end_closing/tasks.md#financial-statements,Senior Finance Manager,Quarterly,GAAP/PFRS-compliant financial statements with comparative prior period data
+Period Lock Policy,System Controls,docs/finance/month_end_closing/tasks.md#period-lock-archive,Senior Finance Manager,Monthly,Accounting period lock after close completion to prevent unauthorized posting
+Document Retention Policy,Compliance & Audit,docs/finance/month_end_closing/tasks.md#period-lock-archive,Finance SSC Manager,Annually,10-year retention of BIR documents with organized digital and physical archiving
+Automation & System Access Policy,IT Controls,docs/finance/month_end_closing/automation.md,Finance SSC Manager,Quarterly,Documented automation workflows with error handling and role-based access controls
+Month-End Closing Procedure,SOP,docs/finance/month_end_closing/calendar.md,Finance Supervisor,Quarterly,15-day close cycle from bank reconciliation through period lock (47 tasks)
+BIR Tax Filing Procedure,SOP,docs/finance/month_end_closing/bir_schedule.md,Finance Supervisor,Quarterly,4-step workflow for BIR form preparation and approval and filing
+Bank Reconciliation Procedure,SOP,docs/finance/month_end_closing/tasks.md#bank-reconciliation,Finance Supervisor,Monthly,5-step process for monthly bank account reconciliation with approval gates
+Cash Advance Liquidation Procedure,SOP,docs/finance/month_end_closing/tasks.md#cash-advance,Accounting Staff,Quarterly,CA issuance and tracking and liquidation with 30-day aging monitoring
+Fixed Asset Acquisition & Disposal Procedure,SOP,docs/finance/month_end_closing/tasks.md#fixed-assets,Finance Supervisor,Quarterly,Complete lifecycle management from asset acquisition through disposal

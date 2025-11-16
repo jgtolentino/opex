@@ -27,7 +27,7 @@
 | **Vector Store** | ✅ PASS | 3 OpenAI vector stores (Policies, SOPs, Examples) |
 | **Authentication** | ✅ PASS | RLS policies active, service_role configured |
 | **Edge Functions** | ✅ PASS | opex-rag-query, ingest-document deployed |
-| **DNS Routing** | ⏳ PENDING | No public DNS/domain configuration found |
+| **DNS Routing** | ✅ PASS | Public Edge Function URL verified and operational |
 | **Logging** | ⚠️ PARTIAL | Basic query logging, no eval metrics |
 | **MCP Agent Routing** | ❌ FAIL | No MCP tool integration - Assistants API only |
 
@@ -383,34 +383,34 @@ async function queryAssistant(request: QueryRequest): Promise<QueryResponse> {
 
 ### Critical (Deploy Blockers)
 
-#### 1. DNS + Public Routing ⏳ PENDING
-**Issue**: No public DNS configuration found
-**Impact**: Cannot access from Rocket.Chat or external services
+#### 1. DNS + Public Routing ✅ VERIFIED
+**Status**: Public Edge Function URL operational
+**Verified**: 2025-11-16 - HTTP 200 response received
 
-**Fix**:
-```bash
-# Option A: Supabase Edge Function already has public URL
-EDGE_FUNCTION_URL="https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/opex-rag-query"
-
-# Test publicly accessible
-curl -X POST "$EDGE_FUNCTION_URL" \
-  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"assistant":"opex","question":"What is OpEx?","userId":"test"}'
-
-# Option B: Custom domain (if needed)
-# 1. Add CNAME record: rag.opex.company.com → ublqmilcjtpnflofprkr.supabase.co
-# 2. Configure in Supabase Dashboard → Project Settings → Custom Domains
+**Public Endpoint**:
+```
+https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/opex-rag-query
 ```
 
-**Verification**:
+**Test Results**:
 ```bash
-# Verify public access works
-curl -sf https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/opex-rag-query \
-  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"assistant":"opex","question":"Test","userId":"health-check"}' | jq .answer
+# Automated test: ./test_dns_access.sh
+HTTP Status: 200
+✅ DNS ACCESS SUCCESSFUL
+
+Response received:
+"It seems that the uploaded files do not contain information specifically defining
+'Operational Excellence.' However, I can provide a general definition based on
+widely accepted concepts..."
 ```
+
+**Note**: Response indicates vector stores are not yet populated with documents.
+This is expected - documents will be uploaded via ingest-document endpoint.
+
+**For Rocket.Chat Integration**:
+- Use public URL: `https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/opex-rag-query`
+- Add authorization header: `Bearer $SUPABASE_ANON_KEY`
+- See INTEGRATION_GUIDE.md for complete webhook setup
 
 ---
 
@@ -914,13 +914,11 @@ async function cohere_rerank(request: RerankRequest) {
 ## 📋 Final Action Plan (Priority Order)
 
 ### Phase 1: Critical Fixes (Deploy Blockers)
-1. ✅ **DNS Verification** - Verify public URL access works
-   ```bash
-   curl -sf https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/opex-rag-query \
-     -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-     -H "Content-Type: application/json" \
-     -d '{"assistant":"opex","question":"Test","userId":"health-check"}' | jq .answer
-   ```
+1. ✅ **DNS Verification** - COMPLETED (2025-11-16)
+   - Public URL verified: `https://ublqmilcjtpnflofprkr.supabase.co/functions/v1/opex-rag-query`
+   - HTTP 200 response received
+   - Automated test script: `./test_dns_access.sh`
+   - Ready for Rocket.Chat webhook integration
 
 ### Phase 2: Required (Production Readiness)
 2. ❌ **Evaluation Framework** - Add rating system and eval metrics
