@@ -3,6 +3,8 @@
 // OpEx RAG Assistant Client - Next.js Wrapper
 // ============================================================================
 
+import { parseJson, parseJsonOrNull } from '../utils/http';
+
 export type AssistantType = 'opex' | 'ph-tax';
 
 export type Domain = 'hr' | 'finance' | 'ops' | 'tax' | 'knowledge_base';
@@ -60,11 +62,11 @@ export async function askAssistant(
   });
 
   if (!response.ok) {
-    const error: RAGQueryError = await response.json();
-    throw new Error(error.error || 'RAG query failed');
+    const error = await parseJsonOrNull<RAGQueryError>(response);
+    throw new Error(error?.error ?? 'RAG query failed');
   }
 
-  return response.json();
+  return parseJson<RAGQueryResponse>(response);
 }
 
 /**
