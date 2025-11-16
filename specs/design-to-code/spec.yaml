@@ -58,6 +58,7 @@ acceptance-criteria:
   - Generated code builds locally without syntax errors using the recommended tooling.
   - Visually identical elements are extracted into reusable components with >70% accuracy.
   - Users can export a working project folder and run `dev` locally to see the cloned UI.
+  - Reference benchmark (gradual.com) achieves 90%+ visual fidelity and extracts hero, feature cards, and pricing sections as reusable components.
 
 metrics:
   - p95 generation time under 5 seconds for a single-screen import.
@@ -75,6 +76,30 @@ mitigations:
   - Deterministic fallback mapping for layout (flex/grid) and typography.
   - Component-matching model with user override controls for edge cases.
   - CI tests that run lint + build on a suite of reference Figma files and URLs.
+
+reference-test-suite:
+  url-benchmarks:
+    - name: gradual.com
+      url: https://www.gradual.com
+      complexity: medium
+      key-patterns:
+        - Hero section with gradient backgrounds
+        - Feature card grids with icons and descriptions
+        - Pricing tables with tier comparisons
+        - Responsive navigation and footer
+        - Modern typography and spacing tokens
+      target-components:
+        - Hero
+        - FeatureCard
+        - PricingTier
+        - Navigation
+        - Footer
+      success-criteria:
+        - 90%+ visual fidelity match
+        - All 5 target components extracted and reusable
+        - Responsive breakpoints preserved (mobile/tablet/desktop)
+        - Build succeeds with zero errors
+        - Page loads under 3s in dev mode
 
 milestones:
   - m1: Playground runtime (tri-panel UI + basic preview).

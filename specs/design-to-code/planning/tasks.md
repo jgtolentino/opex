@@ -35,4 +35,9 @@
 ## Compliance & Quality
 - [ ] Add unit/integration tests for parsers and generators.
 - [ ] Create reference suite of Figma files and public URLs.
+  - [ ] Add gradual.com as URL benchmark (hero, feature cards, pricing, navigation, footer)
+  - [ ] Validate 90%+ visual fidelity target
+  - [ ] Ensure all 5 target components extract as reusable
+  - [ ] Test responsive breakpoints (mobile/tablet/desktop)
+  - [ ] Verify build success and <3s dev mode page load
 - [ ] Add visual regression tests for key flows (future).
