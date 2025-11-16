@@ -1,0 +1,84 @@
+spec-version: "1.0"
+id: dtc-playground
+title: "Design-to-Code Playground and Figma/URL Plugin"
+status: draft
+owners:
+  - user: jgtolentino
+created: 2025-11-17
+type: feature
+labels: [ai, frontend, figma, codegen, automation]
+
+problem:
+  summary: >
+    Converting Figma designs or live website layouts into production-ready,
+    editable code requires significant manual effort, slows prototyping,
+    creates mismatched design systems, and introduces handoff friction between
+    design and development teams.
+
+context:
+  audience:
+    - Designers
+    - Front-end engineers
+    - Founders
+    - AI developer tooling teams
+  affected-systems:
+    - Claude Code CLI
+    - VS Code extension
+    - Figma plugin ecosystem
+    - Web playground runtime
+
+goals:
+  - Convert Figma designs into code (React, TSX, UI libraries).
+  - Clone and translate any public live URL into an editable codebase.
+  - Provide a real-time tri-panel workspace (Code, Preview, Reference).
+  - Auto-detect UI components and generate reusable structures.
+  - Allow customization of tokens, frameworks, file structure, and naming.
+
+non-goals:
+  - Backend code generation or API scaffolding.
+  - Full automatic state management inference.
+  - Design system governance or auditing features.
+
+constraints:
+  - Must integrate cleanly with Claude Code without requiring heavy external infra.
+  - Figma access must respect OAuth scopes and team/project permissions.
+  - Website cloning must display clear legal/IP responsibility notices.
+  - Generated projects must build with a standard Node.js toolchain (e.g. pnpm, npm, or yarn).
+
+dependencies:
+  - Figma REST and Node Tree APIs.
+  - Claude Code SDK / hooks.
+  - Browser DOM + CSS extractor for URL inputs.
+  - VS Code extension APIs (Webview, filesystem access).
+  - Local preview runtime (Next.js or Vite).
+
+acceptance-criteria:
+  - A selected Figma frame imports and generates valid TSX with optional UI-library bindings.
+  - A public URL imports with layout, CSS, and key assets preserved.
+  - Generated code builds locally without syntax errors using the recommended tooling.
+  - Visually identical elements are extracted into reusable components with >70% accuracy.
+  - Users can export a working project folder and run `dev` locally to see the cloned UI.
+
+metrics:
+  - p95 generation time under 5 seconds for a single-screen import.
+  - Component reuse accuracy target of at least 70%.
+  - Visual fidelity target of at least 90% similarity to the source design.
+  - 100% build success rate for freshly exported projects.
+
+risks:
+  - Legal/IP exposure when cloning proprietary websites without rights.
+  - Layout inference inconsistencies on complex, responsive designs.
+  - LLM hallucinations causing invalid markup or unused code.
+
+mitigations:
+  - Mandatory user confirmation and IP notice on URL-based imports.
+  - Deterministic fallback mapping for layout (flex/grid) and typography.
+  - Component-matching model with user override controls for edge cases.
+  - CI tests that run lint + build on a suite of reference Figma files and URLs.
+
+milestones:
+  - m1: Playground runtime (tri-panel UI + basic preview).
+  - m2: Figma importer and node tree normalization.
+  - m3: URL importer with DOM/CSS extraction.
+  - m4: UI-library adapters (ShadCN, MUI, AntD, no-library mode).
+  - m5: VS Code + Claude Code integration and packaging.
