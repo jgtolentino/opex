@@ -94,12 +94,46 @@ reference-test-suite:
         - PricingTier
         - Navigation
         - Footer
+      visual-regression-testing:
+        approach: self-hosted (ADR-002)
+        tool-stack:
+          - jest-puppeteer for screenshot capture
+          - blazediff for image comparison
+          - Supabase Storage for baseline storage
+          - GitHub Actions for CI automation
+        test-matrix:
+          viewports: [mobile-375px, tablet-768px, desktop-1440px]
+          frameworks: [react-tsx]
+          ui-libraries: [shadcn, mui, antd, none]
+          themes: [light, dark]
+        baseline-strategy:
+          - Capture original gradual.com screenshots as baselines
+          - Store in Supabase Storage organized by viewport/theme
+          - Auto-update baselines on main branch design changes
+          - Require manual approval for >5% diff baseline updates
+        pr-validation:
+          - Generate code from gradual.com URL
+          - Capture screenshots of generated output across test matrix
+          - Compare with baselines using blazediff
+          - Calculate component-level similarity scores
+          - Upload diff images to PR artifacts
+          - Comment PR with fidelity breakdown
+          - Fail CI if overall similarity <90% or any component <85%
+        local-testing:
+          command: npm run test:visual:gradual
+          options:
+            - Select viewport (mobile/tablet/desktop/all)
+            - Select UI library (shadcn/mui/antd/none)
+            - Select theme (light/dark/both)
+            - Generate diff report in terminal
       success-criteria:
-        - 90%+ visual fidelity match
+        - 90%+ visual fidelity match (measured via automated visual regression)
+        - Component-level fidelity: Hero ≥92%, FeatureCard ≥90%, PricingTier ≥88%, Navigation ≥90%, Footer ≥85%
         - All 5 target components extracted and reusable
         - Responsive breakpoints preserved (mobile/tablet/desktop)
         - Build succeeds with zero errors
         - Page loads under 3s in dev mode
+        - Visual regression tests pass in CI on every PR
 
 milestones:
   - m1: Playground runtime (tri-panel UI + basic preview).
