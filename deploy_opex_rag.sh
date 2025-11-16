@@ -88,6 +88,7 @@ echo "▶ Deploying Edge Functions…"
 
 supabase functions deploy opex-rag-query --project-ref "$PROJECT_REF"
 supabase functions deploy ingest-document --project-ref "$PROJECT_REF"
+supabase functions deploy rag-feedback --project-ref "$PROJECT_REF"
 
 echo
 echo "✔ Functions deployed:"
