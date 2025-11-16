@@ -6,6 +6,8 @@
 import { HTMLToFigmaConverter } from './converter'
 import type { PageSnapshot, ImportOptions, PluginMessage } from './types'
 import { extractDomain, formatDuration } from './utils'
+import { fetchPageSnapshotFromAPI, checkBackendHealth } from './api'
+import { API_CONFIG, logEvent } from './config'
 
 // Show plugin UI
 figma.showUI(__html__, {
@@ -35,6 +37,10 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         handleCancel()
         break
 
+      case 'check-backend':
+        await handleCheckBackend()
+        break
+
       default:
         console.warn('Unknown message type:', msg.type)
     }
@@ -50,10 +56,39 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 }
 
 /**
- * Import from URL (requires backend API or browser extension)
+ * Check backend health
+ */
+async function handleCheckBackend() {
+  try {
+    const health = await checkBackendHealth()
+
+    sendToUI({
+      type: 'backend-status',
+      payload: {
+        healthy: health.healthy,
+        url: API_CONFIG.BACKEND_URL,
+        error: health.error
+      }
+    })
+  } catch (error) {
+    sendToUI({
+      type: 'backend-status',
+      payload: {
+        healthy: false,
+        url: API_CONFIG.BACKEND_URL,
+        error: error instanceof Error ? error.message : 'Failed to check backend'
+      }
+    })
+  }
+}
+
+/**
+ * Import from URL (calls backend API)
  */
 async function handleImportURL(options: ImportOptions) {
   const { url, viewport } = options
+
+  logEvent('import_started', { url, viewport: viewport.name })
 
   try {
     sendToUI({
@@ -61,8 +96,7 @@ async function handleImportURL(options: ImportOptions) {
       payload: { message: `Fetching ${extractDomain(url)}...`, progress: 10 }
     })
 
-    // For MVP, we'll create a simple demo/placeholder
-    // In production, this would call a backend API
+    // Fetch page snapshot from backend API
     const snapshot = await fetchPageSnapshot(url, options)
 
     sendToUI({
@@ -74,6 +108,12 @@ async function handleImportURL(options: ImportOptions) {
     const converter = new HTMLToFigmaConverter()
     const result = await converter.convert(snapshot)
 
+    logEvent('import_completed', {
+      url,
+      nodesCreated: result.stats.nodesCreated,
+      duration: result.stats.duration
+    })
+
     sendToUI({
       type: 'complete',
       payload: {
@@ -82,6 +122,11 @@ async function handleImportURL(options: ImportOptions) {
       }
     })
   } catch (error) {
+    logEvent('import_failed', {
+      url,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+
     throw new Error(`Failed to import URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
@@ -98,6 +143,11 @@ async function handleImportSnapshot(snapshot: PageSnapshot) {
 
     const converter = new HTMLToFigmaConverter()
     const result = await converter.convert(snapshot)
+
+    logEvent('snapshot_imported', {
+      url: snapshot.url,
+      nodesCreated: result.stats.nodesCreated
+    })
 
     sendToUI({
       type: 'complete',
@@ -128,23 +178,36 @@ function handleCancel() {
 
 /**
  * Fetch page snapshot from URL
- * NOTE: This is a placeholder implementation for MVP
- * Production version would call a backend API or use browser extension
+ * Tries backend API first, falls back to demo mode on error
  */
 async function fetchPageSnapshot(
   url: string,
   options: ImportOptions
 ): Promise<PageSnapshot> {
-  // For MVP/demo, create a simple placeholder snapshot
-  // In production, this would make an API call:
-  // const response = await fetch(`https://api.webtodesign.com/convert?url=${encodeURIComponent(url)}`)
-  // return await response.json()
+  try {
+    // Try backend API first
+    console.log(`Fetching from backend: ${API_CONFIG.BACKEND_URL}`)
+    return await fetchPageSnapshotFromAPI(url, options)
+  } catch (error) {
+    console.warn('Backend API failed, using demo mode:', error)
 
-  return createDemoSnapshot(url, options)
+    // Notify user we're in demo mode
+    sendToUI({
+      type: 'status',
+      payload: {
+        message: 'Backend unavailable, generating demo layout...',
+        progress: 30
+      }
+    })
+
+    // Fall back to demo snapshot
+    return createDemoSnapshot(url, options)
+  }
 }
 
 /**
  * Create demo snapshot for testing
+ * Used when backend is unavailable or for local development
  */
 function createDemoSnapshot(url: string, options: ImportOptions): PageSnapshot {
   const domain = extractDomain(url)
@@ -262,8 +325,8 @@ function createDemoSnapshot(url: string, options: ImportOptions): PageSnapshot {
               {
                 tag: 'h2',
                 type: 'text',
-                text: 'Welcome to WebToDesign',
-                rect: { x: 100, y: 184, width: 400, height: 48 },
+                text: 'Demo Mode - Backend Unavailable',
+                rect: { x: 100, y: 184, width: 500, height: 48 },
                 styles: {
                   color: '#1a1a1a',
                   fontSize: 36,
@@ -274,7 +337,7 @@ function createDemoSnapshot(url: string, options: ImportOptions): PageSnapshot {
               {
                 tag: 'p',
                 type: 'text',
-                text: 'This is a demo of HTML to Figma conversion. Connect a backend API or browser extension to import real websites!',
+                text: 'The WebToDesign backend API is not available. This is a demo layout. Deploy the backend to import real websites!',
                 rect: { x: 100, y: 248, width: 500, height: 60 },
                 styles: {
                   color: '#666666',
@@ -345,13 +408,13 @@ function createDemoSnapshot(url: string, options: ImportOptions): PageSnapshot {
         ]
       }
     ],
-    colors: ['#1a1a1a', '#ffffff', '#f5f5f5', '#666666', '#18A0FB'],
+    colors: ['#1a1a1a', '#ffffff', '#f5f5f5', '#666666'],
     fonts: [
-      { family: 'Inter', weights: ['400', '600', '700'] }
+      { family: 'Inter', weights: ['400', '700'] }
     ],
     metadata: {
       capturedAt: new Date().toISOString(),
-      userAgent: 'WebToDesign Figma Plugin v1.0.0'
+      userAgent: 'WebToDesign Figma Plugin v1.0.0 (Demo Mode)'
     }
   }
 }
