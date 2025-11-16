@@ -1,6 +1,6 @@
 // ============================================================================
 // alert-notifier/index.ts
-// Supabase Edge Function - Send Slack notifications for RAG alerts
+// Supabase Edge Function - Send Rocket.Chat notifications for RAG alerts
 // ============================================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -8,7 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const SLACK_WEBHOOK_URL = Deno.env.get('SLACK_WEBHOOK_URL')!;
+const ROCKETCHAT_WEBHOOK_URL = Deno.env.get('ROCKETCHAT_WEBHOOK_URL')!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   db: { schema: 'opex' },
@@ -28,22 +28,21 @@ interface Alert {
   created_at: string;
 }
 
-interface SlackMessage {
+interface RocketChatMessage {
   text: string;
-  blocks: Array<{
-    type: string;
-    text?: {
-      type: string;
-      text: string;
-    };
+  attachments?: Array<{
+    title?: string;
+    text?: string;
+    color?: string;
     fields?: Array<{
-      type: string;
-      text: string;
+      title: string;
+      value: string;
+      short?: boolean;
     }>;
   }>;
 }
 
-function buildSlackMessage(alert: Alert): SlackMessage {
+function buildRocketChatMessage(alert: Alert): RocketChatMessage {
   const severityEmoji = {
     low: '🔵',
     medium: '🟡',
@@ -57,34 +56,40 @@ function buildSlackMessage(alert: Alert): SlackMessage {
     rating: '⭐'
   }[alert.alert_type] || '📢';
 
+  const severityColor = {
+    low: '#0000FF',
+    medium: '#FFFF00',
+    high: '#FFA500',
+    critical: '#FF0000'
+  }[alert.severity] || '#808080';
+
+  // Rocket.Chat simplified format
   return {
-    text: `${severityEmoji} OpEx RAG Alert: ${alert.message}`,
-    blocks: [
+    text: `${severityEmoji} ${typeEmoji} **OpEx RAG Alert**: ${alert.message}`,
+    attachments: [
       {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: `${severityEmoji} ${typeEmoji} ${alert.message}`
-        }
-      },
-      {
-        type: 'section',
+        title: `Alert Details - ${alert.alert_type.toUpperCase()}`,
+        color: severityColor,
         fields: [
           {
-            type: 'mrkdwn',
-            text: `*Alert Type:*\n${alert.alert_type}`
+            title: 'Alert Type',
+            value: alert.alert_type,
+            short: true
           },
           {
-            type: 'mrkdwn',
-            text: `*Severity:*\n${alert.severity}`
+            title: 'Severity',
+            value: alert.severity,
+            short: true
           },
           {
-            type: 'mrkdwn',
-            text: `*Time:*\n${new Date(alert.created_at).toLocaleString()}`
+            title: 'Time',
+            value: new Date(alert.created_at).toLocaleString(),
+            short: true
           },
           {
-            type: 'mrkdwn',
-            text: `*Alert ID:*\n${alert.id.substring(0, 8)}`
+            title: 'Alert ID',
+            value: alert.id.substring(0, 8),
+            short: true
           }
         ]
       }
@@ -128,31 +133,31 @@ serve(async (req) => {
       );
     }
 
-    console.log('📢 Sending Slack notification for alert:', {
+    console.log('📢 Sending Rocket.Chat notification for alert:', {
       id: alert.id,
       type: alert.alert_type,
       severity: alert.severity
     });
 
-    // Build Slack message
-    const slackMessage = buildSlackMessage(alert);
+    // Build Rocket.Chat message
+    const rocketChatMessage = buildRocketChatMessage(alert);
 
-    // Send to Slack
-    const slackResponse = await fetch(SLACK_WEBHOOK_URL, {
+    // Send to Rocket.Chat
+    const rocketChatResponse = await fetch(ROCKETCHAT_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(slackMessage)
+      body: JSON.stringify(rocketChatMessage)
     });
 
-    if (!slackResponse.ok) {
-      const errorText = await slackResponse.text();
-      console.error('❌ Slack webhook failed:', {
-        status: slackResponse.status,
+    if (!rocketChatResponse.ok) {
+      const errorText = await rocketChatResponse.text();
+      console.error('❌ Rocket.Chat webhook failed:', {
+        status: rocketChatResponse.status,
         error: errorText
       });
 
       return new Response(
-        JSON.stringify({ error: 'Failed to send Slack notification', details: errorText }),
+        JSON.stringify({ error: 'Failed to send Rocket.Chat notification', details: errorText }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -168,13 +173,13 @@ serve(async (req) => {
       // Don't fail the request - notification was successful
     }
 
-    console.log('✅ Slack notification sent successfully:', alert.id);
+    console.log('✅ Rocket.Chat notification sent successfully:', alert.id);
 
     return new Response(
       JSON.stringify({
         success: true,
         alert_id: alert.id,
-        message: 'Slack notification sent'
+        message: 'Rocket.Chat notification sent'
       }),
       {
         status: 200,
