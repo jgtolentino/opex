@@ -38,6 +38,11 @@ This framework provides specialized AI sub-agents for each BPM role, enabling di
 - **Focus**: Task routing, collaboration, unified reporting
 - **Capabilities**: Agent delegation, dependency management, consolidated insights
 
+### 7. **Designer Mentor** (`designer-mentor/`)
+- **Role**: Enterprise UX/UI design mentor and component playground
+- **Focus**: Mobile-first design, design systems, developer handoff
+- **Capabilities**: Workflow → screen translation, component recommendations (Fiori/HIG/Material), accessibility-first design, implementation-ready specs
+
 ## Architecture
 
 ```
