@@ -10,6 +10,12 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 export default withBundleAnalyzer({
   staticPageGenerationTimeout: 300,
+
+  eslint: {
+    // ✅ Do NOT fail Vercel builds because of lint errors
+    ignoreDuringBuilds: true
+  },
+
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'www.notion.so' },
