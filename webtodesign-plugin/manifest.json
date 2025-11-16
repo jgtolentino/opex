@@ -1,0 +1,12 @@
+{
+  "name": "WebToDesign",
+  "id": "webtodesign-html-figma-converter",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "This plugin needs to fetch websites from any domain to convert them to Figma designs"
+  }
+}
