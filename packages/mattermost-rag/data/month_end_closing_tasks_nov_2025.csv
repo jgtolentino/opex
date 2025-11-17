@@ -1,0 +1,27 @@
+month,year,phase,category,task_name,description,due_start,due_end,team_codes
+November,2025,Phase I - Initial & Compliance,Books & Compliance,Obtain Paperwork & Tax Provisions,Calculate and record monthly Tax Provision and PPS Provision,2025-11-21,2025-11-24,RIM;CKVC;BOM
+November,2025,Phase I - Initial & Compliance,VAT Data/Filing,Compile, review and record the monthly VAT Report,Compile and record monthly Input VAT entries,2025-11-21,2025-11-25,JAP;JPAL;JLI;RIM
+November,2025,Phase I - Initial & Compliance,CA Liquidation (AR),Process and record Cash Advance Liquidations,For specific projects and employee-submitted CA liquidations,2025-11-24,2025-11-26,LAS;RMQB;RIM;CKVC
+November,2025,Phase II - Accruals & Amortization,Accruals & Amortization,Record accruals for Consultancy Fees,Record accruals for Consultancy Fees,2025-11-25,2025-11-26,RIM;CKVC
+November,2025,Phase II - Accruals & Amortization,Accruals & Amortization,Accrue Management and Royalty fees,Accrue Management and Royalty fees,2025-11-24,2025-11-26,BOM;RIM;CKVC
+November,2025,Phase II - Accruals & Amortization,Accruals & Amortization,Recognize revenue and billable costs,Recognize revenue and billable costs,2025-11-24,2025-11-26,JPAL;BOM;CKVC
+November,2025,Phase II - Accruals & Amortization,Accruals & Amortization,Record recurring monthly costs,Record recurring monthly costs,2025-11-25,2025-11-26,LAS;RIM;CKVC
+November,2025,Phase II - Accruals & Amortization,Accruals & Amortization,Computer Related Costs capitalization,Computer Related Costs capitalization,2025-11-25,2025-11-26,LAS;RIM;CKVC
+November,2025,Phase II - Accruals & Amortization,Accruals & Amortization,Cellphone Allowance accrual,Cellphone Allowance accrual,2025-11-24,2025-11-26,RMQB;LAS;CKVC
+November,2025,Phase II - Accruals & Amortization,Accruals & Amortization,Compile revenue accrual documents,Compile revenue accrual documents,2025-11-25,2025-11-25,JOL
+November,2025,Phase II - Accruals & Amortization,Amortization (IT/Fixed Assets),Record Rental Income/Expense and amortization,Record Rental Income/Expense and amortization,2025-11-25,2025-11-26,RIM;CKVC
+November,2025,Phase II - Accruals & Amortization,Amortization (IT/Fixed Assets),Allocate prepaid expenses and capital costs,Allocate prepaid expenses and capital costs,2025-11-25,2025-11-26,LAS;RIM;CKVC
+November,2025,Phase II - Accruals & Amortization,Amortization (IT/Fixed Assets),Accrue Management and Royalty fees,Accrue Management and Royalty fees (IT/FA context),2025-11-25,2025-11-27,BOM;RIM;CKVC
+November,2025,Phase II - Accruals & Amortization,Amortization (IT/Fixed Assets),Accrue estimated Audit Fees,Accrue estimated Audit Fees,2025-11-25,2025-11-26,JPAL;BOM;CKVC
+November,2025,Phase II - Accruals & Amortization,Additional Monthly Tasks,Record Rental Expenses/Income (intercompany),Record Rental Expenses/Income (intercompany),2025-11-25,2025-11-26,JPAL;BOM;CKVC
+November,2025,Phase II - Accruals & Amortization,Additional Monthly Tasks,Revaluation of Intercompany Balances,Revaluation of Intercompany Balances,2025-11-25,2025-11-26,JPAL;BOM;CKVC
+November,2025,Phase II - Accruals & Amortization,Additional Monthly Tasks,Record financial assets and long-term commitments,Record financial assets and long-term commitments,2025-11-26,2025-11-27,LAS;RIM;CKVC
+November,2025,Phase III - WIP Reconciliation,WIP,WIP/COP Reconciliation,WIP/COP Reconciliation,2025-11-26,2025-11-27,JAP;BOM;RIM
+November,2025,Phase III - WIP Reconciliation,WIP,Prepare WIP schedule summary per JGAR,Prepare WIP schedule summary per JGAR,2025-11-25,2025-11-27,JRMO;JPAL;RIM
+November,2025,Phase IV - Final Adjustments & Close,Final Adjustments & Close,Reversal/adjustment of temporary JEs,Reversal/adjustment of temporary journal entries,2025-11-26,2025-11-27,RIM;CKVC
+November,2025,Phase IV - Final Adjustments & Close,Final Adjustments & Close,Process reversal entries for prior month accruals,Process reversal entries for prior month accruals,2025-11-26,2025-11-27,BOM;CKVC;RIM
+November,2025,Phase IV - Final Adjustments & Close,Final Adjustments & Close,Prepare Flash, Wins & Losses, Revenue reports,Flash, Wins & Losses, Revenue reporting,2025-11-27,2025-12-01,BOM;RIM;CKVC
+November,2025,Phase IV - Final Adjustments & Close,Final Adjustments & Close,Prepare Working Capital report,Working Capital reporting,2025-11-27,2025-12-01,BOM;CKVC;RIM
+November,2025,Phase IV - Final Adjustments & Close,Final Adjustments & Close,Prepare AP Aging report,AP Aging reporting,2025-11-27,2025-12-01,LAS;RIM;CKVC
+November,2025,Phase IV - Final Adjustments & Close,Final Adjustments & Close,Final TB Review,Final Trial Balance Review,2025-11-28,2025-11-28,RIM
+November,2025,Phase IV - Final Adjustments & Close,Final Adjustments & Close,Final TB Sign-off & Filing,Final Trial Balance Sign-off & Filing,2025-12-01,2025-12-01,CKVC
