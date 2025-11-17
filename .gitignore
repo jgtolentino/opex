@@ -119,3 +119,4 @@ scripts/*assistant*.ts
 scripts/upload*.ts
 scripts/*Vector*.ts
 config/secrets/
+node_modules/
