@@ -13,11 +13,19 @@ OpEx is a comprehensive operational excellence platform built on a hybrid archit
 - A **Next.js application** that renders Notion pages dynamically
 - A **Docusaurus documentation site** with structured HR/Finance/Operations content
 - **RAG (Retrieval-Augmented Generation)** systems powered by OpenAI and Supabase
+- **InsightPulse Data Lab** - Analytics platform with Superset, Deepnote, ECharts, and Jenny (AI BI Genie)
 - **BPM Agent Skills Framework** for specialized business process management roles
 - **n8n automation workflows** for operational processes
 - **Python voice agent** for voice-first interactions with RAG capabilities
 
 The platform serves a Finance Shared Services Center (SSC) managing 8 agencies with focus on Philippine tax compliance (BIR forms), HR workflows, and financial operations.
+
+**NEW: InsightPulse Data Lab** - A comprehensive analytics platform featuring:
+- **Jenny (AI BI Genie)**: Conversational analytics with natural language queries
+- **Apache Superset**: Self-hosted BI platform for dashboards and data exploration
+- **Deepnote**: Collaborative notebooks and data job orchestration
+- **Apache ECharts**: Standardized visualization system
+- See `DATA_LAB_INTEGRATION_GUIDE.md` for complete architecture and implementation details.
 
 ---
 
@@ -42,6 +50,13 @@ The platform serves a Finance Shared Services Center (SSC) managing 8 agencies w
 - **OpenAI File Search** - Vector store based document retrieval
 - **OpenAI Agents SDK (Python)** - Voice agent implementation
 - **LangChain concepts** - Used in edge functions
+
+**Data Lab & Analytics** (NEW):
+- **Apache Superset** - Self-hosted BI platform for dashboards
+- **Deepnote** - Collaborative notebook workspace for data jobs
+- **Apache ECharts** - Visualization library (standardized across platform)
+- **Jenny (AI BI Genie)** - Natural language analytics interface
+- **Ant Design (AntD)** - Component library for Data Lab UI
 
 **Styling & UI**:
 - **CSS Modules** - Component-scoped styling
@@ -210,7 +225,13 @@ components/
 ├── styles.module.css          # Core component styles
 ├── GitHubShareButton.tsx      # Share to GitHub button
 ├── Loading.tsx               # Loading indicator
-└── LoadingIcon.tsx           # Animated loading icon
+├── LoadingIcon.tsx           # Animated loading icon
+└── jenny/
+    └── JennyPanel.tsx        # (NEW) Jenny AI BI Genie interface component
+                              # - Chat-first analytics UI
+                              # - Natural language to SQL/charts
+                              # - Multi-modal results (insight/chart/data/SQL/explain)
+                              # - Databricks Genie-style UX
 ```
 
 **Key Patterns**:
@@ -400,9 +421,20 @@ config/
 .claude/
 ├── AGENTS.md                 # BPM skill definitions and usage
 ├── CTO_MENTOR_PROMPTS.md     # CTO mentor skill examples
-└── LANDING_PAGE_PROMPTS.md   # Landing page copy generation prompts
+├── LANDING_PAGE_PROMPTS.md   # Landing page copy generation prompts
 └── skills/                   # Claude Code skills directory
-    └── (skill subdirectories - loaded by Claude Code CLI)
+    ├── bpm_copywriter/
+    ├── bpm_knowledge_agent/
+    ├── bpm_learning_designer/
+    ├── bpm_transformation_partner/
+    ├── cto_mentor/
+    └── (NEW) Data Lab Skills:
+        ├── insightpulse-superset-platform-admin/
+        ├── insightpulse-superset-embedded-analytics/
+        ├── insightpulse-superset-api-ops/
+        ├── insightpulse-superset-user-enablement/
+        ├── insightpulse-deepnote-data-lab/
+        └── insightpulse-echarts-viz-system/
 ```
 
 ### 2.12 `/scripts` Directory (Automation & Tooling)
@@ -1367,10 +1399,19 @@ pnpm exec ts-node scripts/test-opex-rag.ts
 - `docs/OPEX_RAG_INTEGRATION.md` - Detailed integration guide
 - `docs/SELF_HEALING_PIPELINE.md` - Auto-updating knowledge base
 
+**Data Lab & Analytics** (NEW):
+- `DATA_LAB_INTEGRATION_GUIDE.md` - **Complete InsightPulse Data Lab guide**
+  - Architecture overview (Superset + Deepnote + Jenny + ECharts)
+  - Implementation roadmap (6 phases)
+  - Technical setup and deployment
+  - User personas and workflows
+  - Integration patterns
+
 **Development Frameworks**:
 - `skills/README.md` - Agent skills framework
 - `workflows/n8n/README.md` - n8n workflows
 - `.claude/AGENTS.md` - Claude Code agents configuration
+- `.claude/skills/insightpulse-*` - Data Lab skills (6 skills for Superset, Deepnote, ECharts)
 
 **Deployment & Operations**:
 - `DEPLOYMENT_STATUS.md` - Current deployment state
@@ -1386,6 +1427,9 @@ pnpm exec ts-node scripts/test-opex-rag.ts
 - **Deploying edge functions**: See `scripts/deploy-edge-function.sh`
 - **Understanding skills**: See `skills/README.md` and `.claude/AGENTS.md`
 - **n8n workflows**: See `workflows/n8n/SETUP.md`
+- **Implementing Data Lab**: See `DATA_LAB_INTEGRATION_GUIDE.md` (Superset, Deepnote, Jenny, ECharts)
+- **Working with Jenny**: See `components/jenny/JennyPanel.tsx` and Data Lab guide
+- **Data Lab skills**: See `.claude/skills/insightpulse-*` (6 specialized skills)
 
 ---
 
