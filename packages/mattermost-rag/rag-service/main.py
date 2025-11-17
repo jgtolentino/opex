@@ -275,6 +275,163 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Startup logging
+# ---------- Webhook endpoints ----------
+
+
+@app.post("/mm/incoming-webhook")
+async def handle_incoming_webhook(request: Request):
+    """Handle incoming webhook notifications from external systems"""
+    try:
+        data = await request.json()
+        logger.info("incoming_webhook_received", data_type=data.get("type", "unknown"))
+
+        # Process different notification types
+        notification_type = data.get("type", "alert")
+
+        if notification_type == "rag_result":
+            await post_rag_result(data)
+        elif notification_type == "system_alert":
+            await post_system_alert(data)
+        elif notification_type == "document_update":
+            await post_document_update(data)
+
+        return {"status": "processed", "type": notification_type}
+
+    except Exception as e:
+        logger.error("incoming_webhook_failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Failed to process webhook")
+
+
+async def post_rag_result(data: dict):
+    """Post RAG query results via incoming webhook"""
+    question = data.get("question", "")
+    answer = data.get("answer", "")
+    confidence = data.get("confidence", 0.0)
+
+    message = f"""🤖 **RAG Query Result**
+
+**Question**: {question}
+
+**Answer**: {answer}
+
+**Confidence**: {confidence:.2f}"""
+
+    await send_webhook_message(message, data.get("channel"))
+
+
+async def post_system_alert(data: dict):
+    """Post system alerts via incoming webhook"""
+    alert_level = data.get("level", "info")
+    title = data.get("title", "System Alert")
+    message = data.get("message", "")
+
+    emoji = {
+        "critical": "🚨",
+        "warning": "⚠️",
+        "info": "ℹ️",
+        "success": "✅"
+    }.get(alert_level, "ℹ️")
+
+    formatted_message = f"""{emoji} **{title}**
+
+{message}"""
+
+    await send_webhook_message(formatted_message, data.get("channel"))
+
+
+async def post_document_update(data: dict):
+    """Post document update notifications"""
+    action = data.get("action", "updated")
+    document = data.get("document", "")
+    user = data.get("user", "system")
+
+    message = f"""📄 **Document {action.title()}**
+
+**Document**: {document}
+**Updated by**: {user}"""
+
+    await send_webhook_message(message, data.get("channel"))
+
+
+async def send_webhook_message(message: str, channel: str = None):
+    """Send message via incoming webhook"""
+    webhook_url = os.getenv("MM_INCOMING_WEBHOOK_URL")
+    if not webhook_url:
+        logger.warning("no_incoming_webhook_url")
+        return
+
+    payload = {
+        "text": message,
+        "username": "OpEx RAG System",
+        "icon_url": "https://example.com/rag-system.png"
+    }
+
+    if channel:
+        payload["channel"] = channel
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        try:
+            response = await client.post(webhook_url, json=payload)
+            response.raise_for_status()
+            logger.info("webhook_message_sent", channel=channel)
+        except httpx.HTTPError as e:
+            logger.error("webhook_send_failed", error=str(e))
+
+
+@app.post("/mm/outgoing-webhook")
+async def handle_outgoing_webhook(request: Request):
+    """Handle outgoing webhook from Mattermost for natural language queries"""
+    try:
+        data = await request.json()
+
+        # Verify token
+        token = data.get("token")
+        expected_token = os.getenv("MM_OUTGOING_WEBHOOK_TOKEN")
+        if expected_token and token != expected_token:
+            logger.warning("invalid_outgoing_token", user=data.get("user_name"))
+            raise HTTPException(status_code=403, detail="Invalid webhook token")
+
+        text = data.get("text", "")
+        user_name = data.get("user_name", "")
+        channel_id = data.get("channel_id", "")
+
+        logger.info("outgoing_webhook_received", user=user_name, text=text[:100])
+
+        # Process natural language queries
+        if any(trigger in text.lower() for trigger in ["@opex", "@rag", "ask about"]):
+            query = clean_query(text)
+            answer, citations, confidence_score, confidence_level = await retrieve_and_synthesize(query, user_name)
+
+            response_text = render_answer(answer, citations, confidence_score, confidence_level)
+
+            return {
+                "text": f"@{user_name} {response_text}",
+                "response_type": "in_channel",
+                "username": "OpEx RAG",
+                "icon_url": "https://example.com/rag-bot.png"
+            }
+
+        # Empty response for no action
+        return {"text": ""}
+
+    except Exception as e:
+        logger.error("outgoing_webhook_failed", error=str(e))
+        return {"text": f"Sorry @{data.get('user_name', 'user')}, I encountered an error processing your request."}
+
+
+def clean_query(text: str) -> str:
+    """Clean query text by removing triggers and mentions"""
+    triggers = ["@opex", "@rag", "ask about"]
+    for trigger in triggers:
+        text = text.replace(trigger, "").strip()
+
+    # Remove user mentions
+    import re
+    text = re.sub(r'@\w+', '', text).strip()
+
+    return text
+
+
 @app.on_event("startup")
 async def startup_event():
     logger.info(
@@ -282,6 +439,8 @@ async def startup_event():
         mm_site_url=MM_SITE_URL,
         has_bot_token=bool(MM_BOT_TOKEN),
         has_slash_token=bool(MM_SLASH_TOKEN),
+        has_incoming_webhook=bool(os.getenv("MM_INCOMING_WEBHOOK_URL")),
+        has_outgoing_webhook=bool(os.getenv("MM_OUTGOING_WEBHOOK_TOKEN")),
     )
 
 
