@@ -1,0 +1,168 @@
+id: insightpulse-data-lab
+title: InsightPulse Data Lab
+version: 0.1.0
+owner: jake
+status: draft
+last_updated: "2025-11-17"
+
+# 1. Problem & Context
+problem_statement: >
+  Analysts, engineers, and AI agents need a safe place to explore data, prototype
+  metrics, and design dashboards without touching production code or Odoo directly.
+  Today, ad-hoc analysis lives in local notebooks, random SQL, or screenshots.
+
+  InsightPulse Data Lab provides a shared, cloud notebook workspace (Deepnote)
+  on top of the same Supabase DB used by the Admin Shell and Superset – giving
+  you reproducible analytics, AI-assisted exploration, and a clean path to move
+  from experiments into production views, dashboards, and agents.
+
+background:
+  drivers:
+    - Centralize exploratory work on top of Supabase instead of random tools.
+    - Use AI-assisted notebooks to accelerate SQL, EDA, and feature design.
+    - Create a clean pipeline from "lab notebook" → "Supabase view" → "Superset/AntD page".
+    - Keep Odoo CE/OCA as backend system of record, accessed indirectly via Supabase.
+  current_state:
+    - Supabase holds curated tables and views.
+    - Superset provides BI dashboards.
+    - Admin Shell (AntD + Next.js) provides operational UI.
+    - Exploratory work is fragmented and not consistently reproducible.
+
+# 2. Goals & Non-goals
+goals:
+  - Provide a single Deepnote workspace called "InsightPulse Data Lab" connected to Supabase.
+  - Standardize how EDA, metric definitions, and prototype queries are done.
+  - Provide templates for:
+    - EDA on key schemas (scout, opex, te_tax, ces, etc.).
+    - Designing new Supabase views and RLS policies.
+    - Testing AI/RAG queries before wiring them to agents.
+  - Create a "promotion path" from notebook → SQL migration → Superset chart / Admin Shell page.
+
+non_goals:
+  - Replacing Superset for BI dashboards.
+  - Replacing n8n or Supabase Edge Functions for production ETL.
+  - Direct heavy writes to Odoo – Odoo remains behind Supabase/n8n.
+
+# 3. Personas
+personas:
+  - id: data_builder
+    name: Data Engineer / Analytics Engineer
+    needs:
+      - Direct SQL + Python access to Supabase in a shared environment.
+      - Easy way to move stable logic into migrations and views.
+  - id: analyst
+    name: Analyst / Strategist
+    needs:
+      - Simple, documented notebooks to explore data and test hypotheses.
+      - Basic AI help with SQL and charts.
+  - id: ai_agent
+    name: AI Agent / RAG Layer
+    needs:
+      - Stable, well-validated views and tables (not raw Odoo tables).
+      - Example queries and semantics to generate better answers.
+
+# 4. Scope & v1 Feature Set
+scope:
+  workspace:
+    - "Create a dedicated Deepnote workspace: 'InsightPulse Data Lab'."
+  integrations:
+    - "Connect workspace to Supabase (read/write for dev, read-only for prod)."
+    - "Optional: connect read-only Odoo reporting DB if needed later."
+  templates:
+    - "EDA template notebook per domain (te_tax, opex, scout, ces)."
+    - "Superset design template notebook (from SQL → view → chart)."
+    - "Admin Shell integration template (from query → JSON API design)."
+  governance:
+    - "Naming and folder conventions for notebooks."
+    - "Simple process to 'promote' a notebook outcome into production SQL."
+
+out_of_scope_for_v1:
+  - Scheduled Deepnote pipelines as primary ETL (keep n8n + Supabase functions for prod).
+  - Complex role-based approval flows for notebook changes.
+
+# 5. Functional Requirements
+functional_requirements:
+  workspace:
+    - "Create one Deepnote project 'InsightPulse Data Lab' with clear folder structure."
+    - "Attach Supabase database integration with secure credentials."
+  templates:
+    - "Provide a '00_base_template' notebook with:
+       - Connection boilerplate to Supabase.
+       - Helper functions for querying and visualizing data.
+       - How-to instructions for promoting queries to views."
+    - "Provide domain notebooks, e.g.:
+       - '10_te_tax_eda'
+       - '20_opex_tasks_eda'
+       - '30_scout_metrics_eda'"
+  sql_to_prod_flow:
+    - "Document a simple process:
+       1) Write and test SQL in Deepnote.
+       2) Paste final SQL into a Supabase migration file.
+       3) Deploy via CLI/CI.
+       4) Register resulting view/table in Superset and/or Admin Shell."
+  ai_assistance:
+    - "Enable Deepnote AI (if available) to help generate and explain SQL."
+    - "Include a 'prompt patterns' section in the base template for consistent usage."
+  access_control:
+    - "Use separate DB roles for:
+       - dev (read/write, including DDL in sandbox schemas),
+       - prod (read-only to curated schemas)."
+    - "Ensure credentials are stored only in Deepnote integrations, not inside notebooks."
+
+# 6. Non-functional Requirements
+non_functional_requirements:
+  security:
+    - "Use least-privilege DB users; prod connection must be read-only."
+    - "Never embed Supabase keys or passwords directly in notebook code; use Deepnote secrets/integrations."
+  reliability:
+    - "Lab should not be required for production workloads; if Deepnote is down, Superset and Admin Shell continue to function."
+  documentation:
+    - "Base template must act as self-documenting guide for new collaborators."
+
+# 7. Architecture Overview
+architecture:
+  layers:
+    - "Odoo CE/OCA → n8n → Supabase (curated tables/views)."
+    - "InsightPulse Data Lab (Deepnote) sits directly on Supabase."
+    - "Superset sits on the same Supabase DB for BI dashboards."
+    - "Admin Shell (Ant Design + Next.js) sits on Supabase (and Edge Functions) for app UX."
+  pattern:
+    - "Lab is upstream of Superset/Admin Shell in terms of metric design:
+       Lab → Supabase view → Superset chart / Admin page."
+
+# 8. Data Access Strategy
+data_access:
+  dev:
+    - "Use a dev Supabase project or dev schema (e.g. dev_lab_*) with read/write for experimentation."
+  prod:
+    - "Use read-only DB user limited to curated schemas (e.g. scout, opex, te_tax, ces)."
+    - "No DDL in prod from Lab; migrations must run via CI/CLI."
+  schemas_of_interest:
+    - "scout.* – retail metrics"
+    - "te_tax.* or expenses – T&E validation metrics"
+    - "opex.* – month-end close and ops metrics"
+    - "ces.* – creative effectiveness metrics (if present)"
+
+# 9. Success Metrics
+success_metrics:
+  - "≥ 80% of ad-hoc data questions are answered from Lab notebooks instead of random tools."
+  - "New metrics/views are first vetted in Lab before hitting Superset or Admin Shell."
+  - "Time from 'question' to 'validated SQL view' ≤ 1–2 days for typical use cases."
+
+# 10. Milestones
+milestones:
+  - id: m1
+    name: Workspace & Connections
+    target_date: "2026-01-15"
+    items:
+      - "Create Deepnote workspace and connect Supabase dev+prod."
+  - id: m2
+    name: Templates & Folders
+    target_date: "2026-01-31"
+    items:
+      - "Create base template and domain-specific EDA notebooks."
+  - id: m3
+    name: First Promotion Flow
+    target_date: "2026-02-15"
+    items:
+      - "Take one Lab query → Supabase view → Superset chart → Admin Shell card."
