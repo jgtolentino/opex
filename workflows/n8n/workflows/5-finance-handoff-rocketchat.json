@@ -1,0 +1,326 @@
+{
+  "name": "Finance Handoff Alerts (Rocket.Chat)",
+  "nodes": [
+    {
+      "id": "NotionTrigger_TaskUpdated",
+      "name": "Watch Finance Tasks",
+      "type": "n8n-nodes-base.notionTrigger",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "parameters": {
+        "databaseId": "YOUR_FINANCE_TASKS_DB_ID",
+        "events": [
+          "pageUpdated"
+        ],
+        "simplifyOutput": true
+      },
+      "notes": "Triggers when any page in Finance Tasks DB is updated"
+    },
+    {
+      "id": "If_StatusDone",
+      "name": "Status = Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [500, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.properties?.Status?.name || $json.properties?.Status?.select?.name }}",
+              "operation": "equal",
+              "value2": "Done"
+            }
+          ]
+        }
+      },
+      "notes": "Only proceed if Status changed to 'Done'"
+    },
+    {
+      "id": "If_HasNextStep",
+      "name": "Has Next Step?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [740, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.properties?.['Next Step']?.relation?.[0]?.id || '' }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "notes": "Check if task has a Next Step relation"
+    },
+    {
+      "id": "Notion_GetNextStep",
+      "name": "Get Next Step Task",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [980, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "parameters": {
+        "resource": "page",
+        "operation": "get",
+        "pageId": "={{ $json.properties['Next Step'].relation[0].id }}",
+        "simplifyOutput": true
+      },
+      "notes": "Fetch the next task's details"
+    },
+    {
+      "id": "Set_PrepareNotification",
+      "name": "Prepare Notification Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1220, 300],
+      "parameters": {
+        "keepOnlySet": false,
+        "values": {
+          "string": [
+            {
+              "name": "next_assignee_name",
+              "value": "={{ $json.properties?.['Assignee Name']?.rich_text?.[0]?.plain_text || 'Team Member' }}"
+            },
+            {
+              "name": "next_assignee_email",
+              "value": "={{ $json.properties?.['Assignee Email']?.email || '' }}"
+            },
+            {
+              "name": "next_task_name",
+              "value": "={{ $json.properties?.Name?.title?.[0]?.plain_text || 'Finance Task' }}"
+            },
+            {
+              "name": "next_task_url",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "name": "next_due_date",
+              "value": "={{ $json.properties?.['Due Date']?.date?.start || 'TBD' }}"
+            },
+            {
+              "name": "next_activity",
+              "value": "={{ $json.properties?.Activity?.select?.name || 'Execution' }}"
+            },
+            {
+              "name": "completed_task_name",
+              "value": "={{ $('NotionTrigger_TaskUpdated').item.json.properties?.Name?.title?.[0]?.plain_text || 'Previous task' }}"
+            },
+            {
+              "name": "completed_by",
+              "value": "={{ $('NotionTrigger_TaskUpdated').item.json.properties?.['Assignee Name']?.rich_text?.[0]?.plain_text || 'Unknown' }}"
+            },
+            {
+              "name": "notification_message",
+              "value": "🔔 **Month-End Step Ready**\\n\\n@{{ $json.properties?.['Assignee Name']?.rich_text?.[0]?.plain_text }}, the previous step has been completed by **{{ $('NotionTrigger_TaskUpdated').item.json.properties?.['Assignee Name']?.rich_text?.[0]?.plain_text }}**.\\n\\n✅ **Completed**: {{ $('NotionTrigger_TaskUpdated').item.json.properties?.Name?.title?.[0]?.plain_text }}\\n\\n🚀 **Your step is now ready**:\\n**Task**: [{{ $json.properties?.Name?.title?.[0]?.plain_text }}]({{ $json.url }})\\n**Activity**: {{ $json.properties?.Activity?.select?.name }}\\n**Due**: {{ $json.properties?.['Due Date']?.date?.start || 'TBD' }}\\n\\nPlease review and complete at your earliest convenience."
+            }
+          ]
+        }
+      },
+      "notes": "Extract and format data for Rocket.Chat notification"
+    },
+    {
+      "id": "HTTP_NotifyRocketChat",
+      "name": "Send Rocket.Chat Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1460, 300],
+      "parameters": {
+        "url": "={{ $env.ROCKETCHAT_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.notification_message }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Post notification to finance channel"
+    },
+    {
+      "id": "Notion_UpdateNextTaskStatus",
+      "name": "Update Next Task Status",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1700, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "update",
+        "pageId": "={{ $('Notion_GetNextStep').item.json.id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status",
+              "selectValue": "Ready to Start"
+            },
+            {
+              "key": "Notified At",
+              "dateValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Mark next task as 'Ready to Start' and log notification time"
+    },
+    {
+      "id": "Set_LogHandoff",
+      "name": "Log Handoff Activity",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1940, 300],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "handoff_timestamp",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "from_task",
+              "value": "={{ $('Set_PrepareNotification').item.json.completed_task_name }}"
+            },
+            {
+              "name": "from_assignee",
+              "value": "={{ $('Set_PrepareNotification').item.json.completed_by }}"
+            },
+            {
+              "name": "to_task",
+              "value": "={{ $('Set_PrepareNotification').item.json.next_task_name }}"
+            },
+            {
+              "name": "to_assignee",
+              "value": "={{ $('Set_PrepareNotification').item.json.next_assignee_name }}"
+            },
+            {
+              "name": "notification_channel",
+              "value": "rocketchat"
+            }
+          ]
+        }
+      },
+      "notes": "Optional: Log for analytics/reporting"
+    }
+  ],
+  "connections": {
+    "NotionTrigger_TaskUpdated": {
+      "main": [
+        [
+          {
+            "node": "If_StatusDone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_StatusDone": {
+      "main": [
+        [
+          {
+            "node": "If_HasNextStep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_HasNextStep": {
+      "main": [
+        [
+          {
+            "node": "Notion_GetNextStep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_GetNextStep": {
+      "main": [
+        [
+          {
+            "node": "Set_PrepareNotification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_PrepareNotification": {
+      "main": [
+        [
+          {
+            "node": "HTTP_NotifyRocketChat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_NotifyRocketChat": {
+      "main": [
+        [
+          {
+            "node": "Notion_UpdateNextTaskStatus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_UpdateNextTaskStatus": {
+      "main": [
+        [
+          {
+            "node": "Set_LogHandoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "2",
+      "name": "finance"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}

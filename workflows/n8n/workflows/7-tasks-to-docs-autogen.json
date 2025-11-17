@@ -1,0 +1,309 @@
+{
+  "name": "Finance Tasks → Auto-Generate Docs",
+  "nodes": [
+    {
+      "id": "NotionTrigger_TaskUpdated",
+      "name": "Watch Finance Tasks",
+      "type": "n8n-nodes-base.notionTrigger",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "parameters": {
+        "databaseId": "YOUR_FINANCE_TASKS_DB_ID",
+        "events": [
+          "pageAdded",
+          "pageUpdated"
+        ],
+        "simplifyOutput": true
+      },
+      "notes": "Triggers when tasks are created or updated"
+    },
+    {
+      "id": "If_NeedsDoc",
+      "name": "Needs Documentation?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [540, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.properties?.['Needs Doc']?.checkbox || false }}",
+              "operation": "equal",
+              "value2": "true"
+            }
+          ],
+          "boolean": [
+            {
+              "value1": "={{ $json.properties?.['Has Doc']?.checkbox || false }}",
+              "value2": false
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "notes": "Check if: Needs Doc = true AND Has Doc = false"
+    },
+    {
+      "id": "Set_PrepareDocData",
+      "name": "Prepare Doc Metadata",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [820, 300],
+      "parameters": {
+        "keepOnlySet": false,
+        "values": {
+          "string": [
+            {
+              "name": "doc_title",
+              "value": "Finance Process: {{ $json.properties?.Name?.title?.[0]?.plain_text || 'Untitled' }}"
+            },
+            {
+              "name": "task_category",
+              "value": "={{ $json.properties?.Category?.select?.name || 'General' }}"
+            },
+            {
+              "name": "task_activity",
+              "value": "={{ $json.properties?.Activity?.select?.name || 'Execution' }}"
+            },
+            {
+              "name": "owner_name",
+              "value": "={{ $json.properties?.['Assignee Name']?.rich_text?.[0]?.plain_text || 'Unassigned' }}"
+            },
+            {
+              "name": "owner_email",
+              "value": "={{ $json.properties?.['Assignee Email']?.email || '' }}"
+            },
+            {
+              "name": "task_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "task_url",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "name": "doc_type",
+              "value": "={{ $json.properties?.['Doc Type']?.select?.name || 'SOP' }}"
+            }
+          ]
+        }
+      },
+      "notes": "Extract task metadata for doc creation"
+    },
+    {
+      "id": "Code_SelectDocTemplate",
+      "name": "Select Doc Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const docType = $input.item.json.doc_type || 'SOP';\nconst category = $input.item.json.task_category;\nconst activity = $input.item.json.task_activity;\n\n// Template selection logic\nlet template;\nif (docType === 'PRD' || category === 'Process Design') {\n  template = {\n    type: 'PRD',\n    sections: [\n      { heading: '## Context', content: 'Provide background on why this process is needed and what problem it solves.' },\n      { heading: '## Current State', content: 'Describe the current process (if any) and pain points.' },\n      { heading: '## Proposed Process', content: 'Step-by-step description of the new process.' },\n      { heading: '## Roles & Responsibilities', content: 'Who does what in this process?' },\n      { heading: '## Success Criteria', content: 'How will we measure if this process is working?' },\n      { heading: '## Open Questions', content: 'List any unresolved questions or dependencies.' },\n      { heading: '## Links', content: `**Source Task**: [${$input.item.json.task_url}](${$input.item.json.task_url})` }\n    ]\n  };\n} else if (docType === 'SOP') {\n  template = {\n    type: 'SOP',\n    sections: [\n      { heading: '## Purpose', content: 'What is this SOP for?' },\n      { heading: '## Scope', content: 'When and where does this apply?' },\n      { heading: '## Step-by-Step Instructions', content: '1. Step one\\n2. Step two\\n3. Step three' },\n      { heading: '## Controls & Validations', content: 'What checks must be done at each step?' },\n      { heading: '## Required Evidence', content: 'What documents/screenshots must be saved?' },\n      { heading: '## Common Issues & Troubleshooting', content: 'Known problems and how to fix them.' },\n      { heading: '## Revision History', content: `| Date | Version | Changes | Author |\\n|------|---------|---------|--------|\\n| ${new Date().toISOString().split('T')[0]} | 1.0 | Initial draft | ${$input.item.json.owner_name} |` },\n      { heading: '## Links', content: `**Source Task**: [${$input.item.json.task_url}](${$input.item.json.task_url})` }\n    ]\n  };\n} else if (category === 'BIR Filing' || category === 'Tax Compliance') {\n  template = {\n    type: 'TAX_GUIDE',\n    sections: [\n      { heading: '## BIR Form Details', content: 'Form number, filing frequency, agencies covered.' },\n      { heading: '## Prerequisites', content: 'What must be ready before starting (reports, approvals, etc.)?' },\n      { heading: '## Data Gathering Steps', content: 'Where to get data from ERP/systems.' },\n      { heading: '## Filing Steps', content: 'Step-by-step eBIR or online filing process.' },\n      { heading: '## Payment Steps', content: 'How to generate and pay the tax.' },\n      { heading: '## Evidence & Filing', content: 'What to save and where to file (folder structure).' },\n      { heading: '## Deadlines', content: 'Statutory deadline and our internal cutoffs.' },\n      { heading: '## Links', content: `**Source Task**: [${$input.item.json.task_url}](${$input.item.json.task_url})\\n**BIR Reference**: [BIR.gov.ph](https://www.bir.gov.ph)` }\n    ]\n  };\n} else {\n  // Default template\n  template = {\n    type: 'GENERAL',\n    sections: [\n      { heading: '## Overview', content: 'Brief description of this process.' },\n      { heading: '## Steps', content: '1. Step one\\n2. Step two' },\n      { heading: '## Notes', content: 'Any additional context or tips.' },\n      { heading: '## Links', content: `**Source Task**: [${$input.item.json.task_url}](${$input.item.json.task_url})` }\n    ]\n  };\n}\n\nreturn {\n  json: {\n    ...$input.item.json,\n    template_type: template.type,\n    template_sections: template.sections\n  }\n};"
+      },
+      "notes": "Choose template based on task category and doc type"
+    },
+    {
+      "id": "Notion_CreateDocPage",
+      "name": "Create Doc in Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1380, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "create",
+        "databaseId": "YOUR_FINANCE_DOCS_DB_ID",
+        "title": "={{ $json.doc_title }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Type",
+              "selectValue": "={{ $json.template_type }}"
+            },
+            {
+              "key": "Status",
+              "selectValue": "Draft"
+            },
+            {
+              "key": "Owner",
+              "textContent": "={{ $json.owner_name }}"
+            },
+            {
+              "key": "Source Task",
+              "urlContent": "={{ $json.task_url }}"
+            },
+            {
+              "key": "Category",
+              "selectValue": "={{ $json.task_category }}"
+            },
+            {
+              "key": "Created From",
+              "selectValue": "Task (Auto)"
+            }
+          ]
+        },
+        "blockUi": {
+          "blockValues": "={{ $json.template_sections.map(s => ({ type: 'paragraph', richText: true, textContent: s.heading + '\\n\\n' + s.content })) }}"
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Creates structured doc page with template content"
+    },
+    {
+      "id": "Notion_UpdateTaskWithDoc",
+      "name": "Link Doc to Task",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1660, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "update",
+        "pageId": "={{ $('Set_PrepareDocData').item.json.task_id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Doc Link",
+              "urlContent": "={{ $json.url }}"
+            },
+            {
+              "key": "Has Doc",
+              "checkboxValue": true
+            },
+            {
+              "key": "Status",
+              "selectValue": "In Documentation"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Update original task with doc link"
+    },
+    {
+      "id": "HTTP_NotifyOwner",
+      "name": "Notify Owner via Rocket.Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1940, 300],
+      "parameters": {
+        "url": "={{ $env.ROCKETCHAT_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "📝 **New doc auto-generated**\\n\\n**Owner**: @{{ $('Set_PrepareDocData').item.json.owner_name }}\\n**Task**: [{{ $('Set_PrepareDocData').item.json.task_category }}]({{ $('Set_PrepareDocData').item.json.task_url }})\\n**Doc**: [{{ $('Set_PrepareDocData').item.json.doc_title }}]({{ $('Notion_CreateDocPage').item.json.url }})\\n**Template**: {{ $('Code_SelectDocTemplate').item.json.template_type }}\\n\\nPlease review and complete the documentation."
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Notify task owner that doc is ready"
+    }
+  ],
+  "connections": {
+    "NotionTrigger_TaskUpdated": {
+      "main": [
+        [
+          {
+            "node": "If_NeedsDoc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_NeedsDoc": {
+      "main": [
+        [
+          {
+            "node": "Set_PrepareDocData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_PrepareDocData": {
+      "main": [
+        [
+          {
+            "node": "Code_SelectDocTemplate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_SelectDocTemplate": {
+      "main": [
+        [
+          {
+            "node": "Notion_CreateDocPage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_CreateDocPage": {
+      "main": [
+        [
+          {
+            "node": "Notion_UpdateTaskWithDoc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_UpdateTaskWithDoc": {
+      "main": [
+        [
+          {
+            "node": "HTTP_NotifyOwner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "2",
+      "name": "finance"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}

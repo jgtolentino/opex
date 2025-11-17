@@ -1,0 +1,349 @@
+{
+  "name": "Google Sheets → Notion Finance Tasks (Daily Sync)",
+  "nodes": [
+    {
+      "id": "Cron_Daily7AM",
+      "name": "Daily Sync Trigger (7 AM)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 7,
+              "minute": 0
+            }
+          ]
+        },
+        "timezone": "Asia/Manila"
+      },
+      "notes": "Syncs month-end tasks from Google Sheets daily at 7 AM"
+    },
+    {
+      "id": "GoogleSheets_ReadGantt",
+      "name": "Read Gantt Chart from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [540, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      },
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Closing Task – Gantt Chart",
+          "mode": "name"
+        },
+        "options": {
+          "range": "A2:H200"
+        }
+      },
+      "notes": "Reads all task rows from Gantt sheet (columns: Category, Task, Activity, Employee, Date, etc.)"
+    },
+    {
+      "id": "If_ValidTask",
+      "name": "Filter Valid Tasks",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [820, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json['Detailed Task'] || $json['B'] }}",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json['Date'] || $json['E'] }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "notes": "Only process rows with both Task name and Date"
+    },
+    {
+      "id": "Set_NormalizeData",
+      "name": "Normalize Task Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "parameters": {
+        "keepOnlySet": false,
+        "values": {
+          "string": [
+            {
+              "name": "task_title",
+              "value": "={{ $json['Detailed Task'] || $json['B'] }}"
+            },
+            {
+              "name": "category",
+              "value": "={{ $json['Task Category'] || $json['A'] || 'General' }}"
+            },
+            {
+              "name": "activity",
+              "value": "={{ $json['Activity'] || $json['C'] || 'Execution' }}"
+            },
+            {
+              "name": "employee_code",
+              "value": "={{ ($json['Employee'] || $json['D'] || '').toUpperCase().trim() }}"
+            },
+            {
+              "name": "scheduled_date",
+              "value": "={{ $json['Date'] || $json['E'] }}"
+            },
+            {
+              "name": "row_id",
+              "value": "={{ $json['__rowNum'] || $itemIndex }}"
+            }
+          ]
+        }
+      },
+      "notes": "Extract and clean data from sheet columns"
+    },
+    {
+      "id": "Code_LookupEmployee",
+      "name": "Lookup Employee in Directory",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Employee directory (hardcoded for speed)\nconst directory = {\n  'CKVC': { name: 'Khalil Veracruz', email: 'khalil.veracruz@tbwa-smp.com' },\n  'RIM': { name: 'Rey Meran', email: 'rey.meran@tbwa-smp.com' },\n  'LAS': { name: 'Amor Lasaga', email: 'amor.lasaga@tbwa-smp.com' },\n  'BOM': { name: 'Beng Manalo', email: 'beng.manalo@omc.com' },\n  'JPAL': { name: 'Jinky Paladin', email: 'jinky.paladin@omc.com' },\n  'JPL': { name: 'Jerald Loterte', email: 'jerald.loterte@omc.com' },\n  'JI': { name: 'Jasmin Ignacio', email: 'jasmin.ignacio@omc.com' },\n  'JO': { name: 'Jhoee Oliva', email: 'jhoee.oliva@omc.com' },\n  'JM': { name: 'Joana Maravillas', email: 'joana.maravillas@omc.com' },\n  'RMQB': { name: 'Sally Brillantes', email: 'sally.brillantes@omc.com' },\n  'CJD': { name: 'Cliff Dejecacion', email: 'cliff.dejecacion@omc.com' },\n  'JT': { name: 'Jake Tolentino', email: 'jgtolentino.rn@gmail.com' }\n};\n\n// Process each task\nconst tasks = [];\nfor (const item of $input.all()) {\n  const code = item.json.employee_code;\n  const employee = directory[code] || { name: 'Unassigned', email: '' };\n  \n  tasks.push({\n    json: {\n      ...item.json,\n      assignee_name: employee.name,\n      assignee_email: employee.email,\n      assignee_code: code\n    }\n  });\n}\n\nreturn tasks;"
+      },
+      "notes": "Fast in-memory lookup instead of Notion query (reduces API calls)"
+    },
+    {
+      "id": "Code_ParseDate",
+      "name": "Parse & Format Date",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1660, 300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse various date formats from Google Sheets\nconst dateStr = $input.item.json.scheduled_date;\n\nlet isoDate;\ntry {\n  // If already ISO format\n  if (dateStr.match(/^\\d{4}-\\d{2}-\\d{2}/)) {\n    isoDate = dateStr.split('T')[0];\n  }\n  // If MM/DD/YYYY or DD/MM/YYYY\n  else if (dateStr.match(/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/)) {\n    const parts = dateStr.split('/');\n    const month = parts[0].padStart(2, '0');\n    const day = parts[1].padStart(2, '0');\n    const year = parts[2];\n    isoDate = `${year}-${month}-${day}`;\n  }\n  // If \"Dec 29, 2025\" or similar\n  else {\n    const d = new Date(dateStr);\n    if (!isNaN(d)) {\n      isoDate = d.toISOString().split('T')[0];\n    }\n  }\n} catch (e) {\n  isoDate = null;\n}\n\nreturn {\n  json: {\n    ...$input.item.json,\n    due_date_iso: isoDate,\n    sync_timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "notes": "Convert Google Sheets date to ISO format for Notion"
+    },
+    {
+      "id": "Notion_CreateOrUpdateTask",
+      "name": "Create/Update Task in Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1940, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "create",
+        "databaseId": "YOUR_FINANCE_TASKS_DB_ID",
+        "title": "={{ $json.task_title }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Category",
+              "selectValue": "={{ $json.category }}"
+            },
+            {
+              "key": "Activity",
+              "selectValue": "={{ $json.activity }}"
+            },
+            {
+              "key": "Assignee Name",
+              "textContent": "={{ $json.assignee_name }}"
+            },
+            {
+              "key": "Assignee Email",
+              "emailContent": "={{ $json.assignee_email }}"
+            },
+            {
+              "key": "Employee Code",
+              "textContent": "={{ $json.assignee_code }}"
+            },
+            {
+              "key": "Due Date",
+              "dateValue": "={{ $json.due_date_iso }}"
+            },
+            {
+              "key": "Status",
+              "selectValue": "Scheduled"
+            },
+            {
+              "key": "Source",
+              "selectValue": "Google Sheets (Gantt)"
+            },
+            {
+              "key": "Row ID",
+              "numberValue": "={{ $json.row_id }}"
+            },
+            {
+              "key": "Last Synced",
+              "dateValue": "={{ $json.sync_timestamp }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Creates task in Notion Finance Tasks database"
+    },
+    {
+      "id": "Set_Summary",
+      "name": "Build Sync Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const tasks = $input.all();\nconst total = tasks.length;\nconst categories = {};\nconst assignees = {};\n\ntasks.forEach(t => {\n  const cat = t.json.category || 'Other';\n  const assignee = t.json.assignee_name || 'Unassigned';\n  categories[cat] = (categories[cat] || 0) + 1;\n  assignees[assignee] = (assignees[assignee] || 0) + 1;\n});\n\nconst catSummary = Object.entries(categories)\n  .map(([k, v]) => `  - ${k}: ${v}`)\n  .join('\\n');\n\nconst assigneeSummary = Object.entries(assignees)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 5)\n  .map(([k, v]) => `  - ${k}: ${v} tasks`)\n  .join('\\n');\n\nreturn [{\n  json: {\n    total_tasks: total,\n    summary: `✅ **Finance Tasks Sync Complete**\\n\\n**Total tasks synced**: ${total}\\n\\n**By category**:\\n${catSummary}\\n\\n**Top assignees**:\\n${assigneeSummary}`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "notes": "Aggregate stats for notification"
+    },
+    {
+      "id": "HTTP_NotifyRocketChat",
+      "name": "Post Summary to Rocket.Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2500, 300],
+      "parameters": {
+        "url": "={{ $env.ROCKETCHAT_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.summary }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Optional: notify team of sync completion"
+    }
+  ],
+  "connections": {
+    "Cron_Daily7AM": {
+      "main": [
+        [
+          {
+            "node": "GoogleSheets_ReadGantt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GoogleSheets_ReadGantt": {
+      "main": [
+        [
+          {
+            "node": "If_ValidTask",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_ValidTask": {
+      "main": [
+        [
+          {
+            "node": "Set_NormalizeData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_NormalizeData": {
+      "main": [
+        [
+          {
+            "node": "Code_LookupEmployee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_LookupEmployee": {
+      "main": [
+        [
+          {
+            "node": "Code_ParseDate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_ParseDate": {
+      "main": [
+        [
+          {
+            "node": "Notion_CreateOrUpdateTask",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_CreateOrUpdateTask": {
+      "main": [
+        [
+          {
+            "node": "Set_Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_Summary": {
+      "main": [
+        [
+          {
+            "node": "HTTP_NotifyRocketChat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "2",
+      "name": "finance"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}

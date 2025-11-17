@@ -1,0 +1,350 @@
+{
+  "name": "Finance Task Alerts (Due/Overdue)",
+  "nodes": [
+    {
+      "id": "Cron_Daily8AM",
+      "name": "Daily Alert Check (8 AM)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 8,
+              "minute": 0
+            }
+          ]
+        },
+        "timezone": "Asia/Manila"
+      },
+      "notes": "Check for due/overdue tasks every morning at 8 AM"
+    },
+    {
+      "id": "Notion_QueryTasks",
+      "name": "Get Active Tasks",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [540, 300],
+      "parameters": {
+        "resource": "database",
+        "operation": "getAll",
+        "databaseId": "YOUR_FINANCE_TASKS_DB_ID",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Status",
+              "condition": "isNotEqualTo",
+              "value": "Done"
+            },
+            {
+              "key": "Status",
+              "condition": "isNotEqualTo",
+              "value": "Cancelled"
+            },
+            {
+              "key": "Due Date",
+              "condition": "isNotEmpty"
+            }
+          ]
+        },
+        "sort": {
+          "sortValue": [
+            {
+              "key": "Due Date",
+              "direction": "ascending"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Get all tasks that are not Done/Cancelled and have a due date"
+    },
+    {
+      "id": "Code_ClassifyTasks",
+      "name": "Classify by Urgency",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [820, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const now = new Date();\nconst today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n\nconst overdue = [];\nconst dueToday = [];\nconst dueTomorrow = [];\nconst upcoming = [];\n\nfor (const item of $input.all()) {\n  const dueDate = item.json.properties?.['Due Date']?.date?.start;\n  if (!dueDate) continue;\n  \n  const due = new Date(dueDate);\n  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());\n  \n  const diffDays = Math.floor((dueDay - today) / (1000 * 60 * 60 * 24));\n  \n  const task = {\n    id: item.json.id,\n    url: item.json.url,\n    name: item.json.properties?.Name?.title?.[0]?.plain_text || 'Untitled',\n    assignee_name: item.json.properties?.['Assignee Name']?.rich_text?.[0]?.plain_text || 'Unassigned',\n    assignee_email: item.json.properties?.['Assignee Email']?.email || '',\n    category: item.json.properties?.Category?.select?.name || 'General',\n    status: item.json.properties?.Status?.select?.name || 'Unknown',\n    due_date: dueDate,\n    days_until_due: diffDays\n  };\n  \n  if (diffDays < 0) {\n    overdue.push(task);\n  } else if (diffDays === 0) {\n    dueToday.push(task);\n  } else if (diffDays === 1) {\n    dueTomorrow.push(task);\n  } else if (diffDays <= 3) {\n    upcoming.push(task);\n  }\n}\n\nreturn [{\n  json: {\n    overdue,\n    dueToday,\n    dueTomorrow,\n    upcoming,\n    total_alerts: overdue.length + dueToday.length + dueTomorrow.length,\n    timestamp: now.toISOString()\n  }\n}];"
+      },
+      "notes": "Group tasks by urgency level"
+    },
+    {
+      "id": "If_HasAlerts",
+      "name": "Any Alerts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1100, 300],
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.total_alerts }}",
+              "operation": "largerThan",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "notes": "Only proceed if there are tasks needing alerts"
+    },
+    {
+      "id": "Code_FormatAlertMessage",
+      "name": "Format Alert Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const { overdue, dueToday, dueTomorrow, upcoming } = $input.item.json;\n\nlet message = '🔔 **Finance Task Alerts** 🔔\\n\\n';\n\nif (overdue.length > 0) {\n  message += `🚨 **OVERDUE (${overdue.length})**:\\n`;\n  overdue.forEach(t => {\n    const daysLate = Math.abs(t.days_until_due);\n    message += `  ❗ [${t.name}](${t.url}) - **${t.assignee_name}** (${daysLate} day${daysLate > 1 ? 's' : ''} late)\\n`;\n  });\n  message += '\\n';\n}\n\nif (dueToday.length > 0) {\n  message += `⏰ **DUE TODAY (${dueToday.length})**:\\n`;\n  dueToday.forEach(t => {\n    message += `  📌 [${t.name}](${t.url}) - **${t.assignee_name}**\\n`;\n  });\n  message += '\\n';\n}\n\nif (dueTomorrow.length > 0) {\n  message += `📅 **DUE TOMORROW (${dueTomorrow.length})**:\\n`;\n  dueTomorrow.forEach(t => {\n    message += `  • [${t.name}](${t.url}) - **${t.assignee_name}**\\n`;\n  });\n  message += '\\n';\n}\n\nif (upcoming.length > 0) {\n  message += `📋 **UPCOMING (${upcoming.length})**:\\n`;\n  upcoming.slice(0, 5).forEach(t => {\n    message += `  • [${t.name}](${t.url}) - **${t.assignee_name}** (in ${t.days_until_due} days)\\n`;\n  });\n  if (upcoming.length > 5) {\n    message += `  ... and ${upcoming.length - 5} more\\n`;\n  }\n}\n\nmessage += '\\n---\\n*Daily finance task check at 8:00 AM*';\n\nreturn {\n  json: {\n    ...$input.item.json,\n    alert_message: message\n  }\n};"
+      },
+      "notes": "Build formatted message for Rocket.Chat"
+    },
+    {
+      "id": "HTTP_PostToRocketChat",
+      "name": "Post to Rocket.Chat (General)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1660, 300],
+      "parameters": {
+        "url": "={{ $env.ROCKETCHAT_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.alert_message }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Post summary to finance channel"
+    },
+    {
+      "id": "SplitInBatches_Overdue",
+      "name": "Process Overdue Tasks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1660, 480],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "notes": "Individual notifications for overdue tasks"
+    },
+    {
+      "id": "Code_ExtractOverdueTasks",
+      "name": "Extract Overdue List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 480],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const overdue = $input.item.json.overdue || [];\nreturn overdue.map(task => ({ json: task }));"
+      }
+    },
+    {
+      "id": "Notion_MarkAtRisk",
+      "name": "Mark Task 'At Risk'",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1940, 480],
+      "parameters": {
+        "resource": "page",
+        "operation": "update",
+        "pageId": "={{ $json.id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status",
+              "selectValue": "At Risk"
+            },
+            {
+              "key": "Flagged At",
+              "dateValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      },
+      "notes": "Auto-update status for overdue tasks"
+    },
+    {
+      "id": "HTTP_NotifyAssignee",
+      "name": "DM Assignee (Overdue)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2220, 480],
+      "parameters": {
+        "url": "={{ $env.ROCKETCHAT_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "⚠️ **OVERDUE TASK** ⚠️\\n\\n@{{ $json.assignee_name }}, your task is now **{{ Math.abs($json.days_until_due) }} day(s) overdue**:\\n\\n**Task**: [{{ $json.name }}]({{ $json.url }})\\n**Category**: {{ $json.category }}\\n**Due Date**: {{ $json.due_date }}\\n\\nPlease update the status or request deadline extension."
+            },
+            {
+              "name": "channel",
+              "value": "@{{ $json.assignee_name }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Send direct message to overdue task owner"
+    }
+  ],
+  "connections": {
+    "Cron_Daily8AM": {
+      "main": [
+        [
+          {
+            "node": "Notion_QueryTasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_QueryTasks": {
+      "main": [
+        [
+          {
+            "node": "Code_ClassifyTasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_ClassifyTasks": {
+      "main": [
+        [
+          {
+            "node": "If_HasAlerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_HasAlerts": {
+      "main": [
+        [
+          {
+            "node": "Code_FormatAlertMessage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code_ExtractOverdueTasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_FormatAlertMessage": {
+      "main": [
+        [
+          {
+            "node": "HTTP_PostToRocketChat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_ExtractOverdueTasks": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches_Overdue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitInBatches_Overdue": {
+      "main": [
+        [
+          {
+            "node": "Notion_MarkAtRisk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_MarkAtRisk": {
+      "main": [
+        [
+          {
+            "node": "HTTP_NotifyAssignee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_NotifyAssignee": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches_Overdue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "2",
+      "name": "finance"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,269 @@
+{
+  "name": "Notion Doc Created → Create Task",
+  "nodes": [
+    {
+      "id": "NotionTrigger_NewPage",
+      "name": "Watch Docs Database",
+      "type": "n8n-nodes-base.notionTrigger",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "event": "pageAdded",
+        "databaseId": "YOUR_DOCS_DATABASE_ID_HERE"
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "id": "Notion_GetPageDetails",
+      "name": "Get Page Details",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [540, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "get",
+        "pageId": "={{ $json.id }}"
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "id": "Set_TaskData",
+      "name": "Map to Task Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [820, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "task_title",
+              "value": "={{ $json.properties.Name.title[0].plain_text }}"
+            },
+            {
+              "name": "task_description",
+              "value": "Doc page: {{ $json.url }}\\n\\nContext: {{ $json.properties.Summary?.rich_text[0]?.plain_text || 'No summary provided' }}"
+            },
+            {
+              "name": "task_assignee",
+              "value": "={{ $json.properties.Owner?.people[0]?.name || 'Unassigned' }}"
+            },
+            {
+              "name": "task_due_date",
+              "value": "={{ $json.properties['Due Date']?.date?.start || '' }}"
+            },
+            {
+              "name": "notion_page_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "notion_url",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "name": "doc_type",
+              "value": "={{ $json.properties.Type?.select?.name || 'general' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "HTTP_CreateTask",
+      "name": "Create Task (Generic)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1100, 300],
+      "parameters": {
+        "url": "YOUR_TASK_SYSTEM_API_URL/tasks",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json.task_title }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $json.task_description }}"
+            },
+            {
+              "name": "assignee",
+              "value": "={{ $json.task_assignee }}"
+            },
+            {
+              "name": "due_date",
+              "value": "={{ $json.task_due_date }}"
+            },
+            {
+              "name": "metadata",
+              "value": "={{ { notion_page_id: $json.notion_page_id, source: 'notion_doc_sync' } }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "REPLACE WITH:\n- GitHub: Create Issue node\n- ClickUp: Create Task node\n- Jira: Create Issue node\n- Asana: Create Task node"
+    },
+    {
+      "id": "Notion_UpdatePageWithTaskLink",
+      "name": "Link Task to Doc",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1380, 300],
+      "parameters": {
+        "resource": "page",
+        "operation": "update",
+        "pageId": "={{ $('Set_TaskData').item.json.notion_page_id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Task Link",
+              "textContent": "={{ $json.url || $json.html_url || $json.web_url }}"
+            },
+            {
+              "key": "Task ID",
+              "textContent": "={{ $json.id || $json.key }}"
+            },
+            {
+              "key": "Status",
+              "selectValue": "In Progress"
+            },
+            {
+              "key": "Synced At",
+              "dateValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "notionApi": {
+          "id": "1",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "id": "Mattermost_Notify",
+      "name": "Notify Team (Optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1660, 300],
+      "parameters": {
+        "url": "={{ $env.MATTERMOST_WEBHOOK_URL }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "tasks"
+            },
+            {
+              "name": "text",
+              "value": "📄 **New task created from doc**\\n\\n**Doc**: [{{ $('Set_TaskData').item.json.task_title }}]({{ $('Set_TaskData').item.json.notion_url }})\\n**Task**: [{{ $json.id }}]({{ $json.url }})\\n**Assignee**: {{ $('Set_TaskData').item.json.task_assignee }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "notes": "Optional: Remove if you don't want notifications"
+    }
+  ],
+  "connections": {
+    "NotionTrigger_NewPage": {
+      "main": [
+        [
+          {
+            "node": "Notion_GetPageDetails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_GetPageDetails": {
+      "main": [
+        [
+          {
+            "node": "Set_TaskData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_TaskData": {
+      "main": [
+        [
+          {
+            "node": "HTTP_CreateTask",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_CreateTask": {
+      "main": [
+        [
+          {
+            "node": "Notion_UpdatePageWithTaskLink",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_UpdatePageWithTaskLink": {
+      "main": [
+        [
+          {
+            "node": "Mattermost_Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-16T00:00:00.000Z",
+      "updatedAt": "2025-01-16T00:00:00.000Z",
+      "id": "1",
+      "name": "notion-sync"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-16T00:00:00.000Z",
+  "versionId": "1"
+}
