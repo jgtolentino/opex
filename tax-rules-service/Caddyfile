@@ -1,0 +1,17 @@
+tax.yourdomain.com {
+	encode gzip
+
+	# If Caddy is running in Docker on same network:
+	reverse_proxy tax_rules_service:8000
+
+	@healthcheck path /health
+	handle @healthcheck {
+		respond "ok" 200
+	}
+
+	# Optional: basic logs
+	log {
+		output file /var/log/caddy/tax_access.log
+		format single_field common_log
+	}
+}

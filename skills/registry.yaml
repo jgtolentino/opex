@@ -1,0 +1,33 @@
+# skills/registry.yaml
+
+skills:
+  # Existing skills here...
+  # - id: cto-mentor
+  #   path: skills/cto-mentor/agent.md
+  #   description: CTO Mentor for architecture and platform decisions.
+
+  - id: agentic-architect
+    name: Agentic AI Business Solutions Architect
+    path: skills/agentic-architect/SKILL.md
+    agent:
+      id: agentic-architect
+      config_path: agents/agentic-architect/agent.yaml
+    tags:
+      - architecture
+      - multi-agent
+      - ai-strategy
+      - alm
+      - finance
+      - tax
+      - odoo
+      - supabase
+      - mattermost
+      - n8n
+    capabilities:
+      - plan_ai_business_solutions
+      - design_multi_agent_architectures
+      - define_data_and_rag_strategies
+      - plan_alm_and_governance
+      - evaluate_cost_and_roi
+    owner: jake
+    status: active

@@ -1,0 +1,241 @@
+{
+  "name": "Mattermost RAG Router (Ask + Feedback)",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Mattermost RAG Router",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mattermost-rag-router",
+        "responseMode": "lastNode",
+        "options": {
+          "binaryData": false
+        }
+      }
+    },
+    {
+      "id": "2",
+      "name": "Route by Command",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [520, 300],
+      "parameters": {
+        "propertyName": "={{$json[\"command\"]}}",
+        "dataType": "string",
+        "rules": [
+          {
+            "operation": "equals",
+            "value1": "/ask"
+          },
+          {
+            "operation": "equals",
+            "value1": "/feedback"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3",
+      "name": "Call opex-rag-query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [800, 160],
+      "parameters": {
+        "url": "={{$env(\"SUPABASE_FUNCTION_OPEX_RAG_QUERY\")}}",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "headerParametersJson": "={\"apikey\": \"{{$env(\\\"SUPABASE_ANON_KEY\\\")}}\",\"Content-Type\":\"application/json\"}",
+        "bodyParametersJson": "={\"user_id\": \"{{$json[\\\"user_name\\\"]}}\",\"query_text\": \"{{$json[\\\"text\\\"]}}\",\"metadata\": {\"channel_id\": \"{{$json[\\\"channel_id\\\"]}}\",\"mattermost_user_id\": \"{{$json[\\\"user_id\\\"]}}\",\"source\": \"mattermost\"}}"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Format Ask Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1060, 160],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "response_type",
+              "value": "in_channel"
+            },
+            {
+              "name": "text",
+              "value": "={{\"**Answer**\\\\n\" + $json[\"answer\"] + \"\\\\n\\\\n**Query ID:** \" + $json[\"query_id\"] + \"\\\\n\\\\n_Reply with: /feedback \" + $json[\"query_id\"] + \" [1-5] [optional comment]_\"}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5",
+      "name": "Respond Ask",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1320, 160],
+      "parameters": {
+        "responseMode": "lastNode",
+        "responseBody": "={{$json}}",
+        "responseCode": 200
+      }
+    },
+    {
+      "id": "6",
+      "name": "Parse Feedback",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [800, 440],
+      "parameters": {
+        "functionCode": "const text = $json.text || \"\";\nconst parts = text.split(\" \");\nconst queryId = parts[0] || \"\";\nconst rating = parseInt(parts[1] || \"0\", 10);\nconst feedback = parts.slice(2).join(\" \") || null;\n\nreturn [{\n  json: {\n    queryId,\n    rating,\n    feedback,\n    user_name: $json.user_name,\n    user_id: $json.user_id\n  }\n}];"
+      }
+    },
+    {
+      "id": "7",
+      "name": "Call rag-feedback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1060, 440],
+      "parameters": {
+        "url": "={{$env(\"SUPABASE_FUNCTION_RAG_FEEDBACK\")}}",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "headerParametersJson": "={\"apikey\": \"{{$env(\\\"SUPABASE_ANON_KEY\\\")}}\",\"Content-Type\":\"application/json\"}",
+        "bodyParametersJson": "={\"queryId\": \"{{$json[\\\"queryId\\\"]}}\",\"rating\": {{$json[\"rating\"]}},\"feedback\": {{$json[\"feedback\"] ? JSON.stringify($json[\"feedback\"]) : \"null\"}},\"evaluationMetadata\": {\"source\": \"mattermost\",\"mattermost_user\": \"{{$json[\\\"user_name\\\"]}}\",\"mattermost_user_id\": \"{{$json[\\\"user_id\\\"]}}\"}}"
+      }
+    },
+    {
+      "id": "8",
+      "name": "Format Feedback Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1320, 440],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "response_type",
+              "value": "ephemeral"
+            },
+            {
+              "name": "text",
+              "value": "={{\"Thanks! Feedback saved for query \" + $json[\"queryId\"] + \" with rating \" + $json[\"rating\"]}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9",
+      "name": "Respond Feedback",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1580, 440],
+      "parameters": {
+        "responseMode": "lastNode",
+        "responseBody": "={{$json}}",
+        "responseCode": 200
+      }
+    }
+  ],
+  "connections": {
+    "Mattermost RAG Router": {
+      "main": [
+        [
+          {
+            "node": "Route by Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Command": {
+      "main": [
+        [
+          {
+            "node": "Call opex-rag-query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call opex-rag-query": {
+      "main": [
+        [
+          {
+            "node": "Format Ask Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Ask Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Ask",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Feedback": {
+      "main": [
+        [
+          {
+            "node": "Call rag-feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call rag-feedback": {
+      "main": [
+        [
+          {
+            "node": "Format Feedback Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Feedback Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "versionId": "mattermost-rag-router-v1"
+}

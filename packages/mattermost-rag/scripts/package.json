@@ -1,0 +1,27 @@
+{
+  "name": "mattermost-rag-notion-updater",
+  "version": "1.0.0",
+  "description": "Script to update Notion database with month-end closing tasks",
+  "main": "update-notion-month-end.js",
+  "type": "commonjs",
+  "scripts": {
+    "update": "node update-notion-month-end.js update",
+    "info": "node update-notion-month-end.js info",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.14"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  },
+  "keywords": [
+    "notion",
+    "month-end",
+    "closing",
+    "tasks",
+    "finance"
+  ],
+  "author": "OpEx Team",
+  "license": "MIT"
+}
