@@ -2,6 +2,11 @@ import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { GetStaticProps } from 'next';
+import { VideoSection } from '@/components/VideoSection';
+import { AnimatedStats } from '@/components/AnimatedStats';
+import { ROICalculator } from '@/components/ROICalculator';
+import { InteractiveProcessFlow } from '@/components/InteractiveProcessFlow';
+import { TestimonialCarousel } from '@/components/TestimonialCarousel';
 import styles from '@/styles/Transformation.module.css';
 
 export default function TransformationPage() {
@@ -100,6 +105,16 @@ export default function TransformationPage() {
           </div>
         </section>
 
+        {/* Animated Statistics */}
+        <AnimatedStats
+          stats={[
+            { value: 60, suffix: '%', label: 'Time Savings', icon: '⏱️' },
+            { value: 80, suffix: '%', label: 'Error Reduction', icon: '✓' },
+            { value: 420, suffix: '%', label: 'Average ROI', icon: '📈' },
+            { value: 2.2, decimals: 1, label: 'Months to Payback', icon: '💰' },
+          ]}
+        />
+
         {/* From Strategy to Execution */}
         <section className={styles.strategySection}>
           <div className={styles.container}>
@@ -115,6 +130,14 @@ export default function TransformationPage() {
             </div>
           </div>
         </section>
+
+        {/* Video Section */}
+        <VideoSection
+          title="See OpEx in Action"
+          description="Watch how organizations are transforming their processes with AI-powered intelligence and automation"
+          videoUrl="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+          thumbnail="/images/video-thumbnail.jpg"
+        />
 
         {/* Four Pillars */}
         <section className={styles.pillarsSection}>
@@ -209,61 +232,11 @@ export default function TransformationPage() {
           </div>
         </section>
 
-        {/* Five-Stage Approach */}
-        <section className={styles.stagesSection}>
-          <div className={styles.container}>
-            <h2 className={styles.sectionTitle}>
-              A five-stage approach to business transformation
-            </h2>
+        {/* Interactive Process Flow - Five-Stage Approach */}
+        <InteractiveProcessFlow />
 
-            <div className={styles.stagesContainer}>
-              <div className={styles.stageCard}>
-                <div className={styles.stageNumber}>1</div>
-                <h3 className={styles.stageTitle}>Discover your as-is state and prioritize</h3>
-                <p className={styles.stageText}>
-                  Lay the foundation for transformation by building a comprehensive image of how your organization runs today from both a process and applications perspective.
-                </p>
-                <ul className={styles.stageList}>
-                  <li>Establish a digital single source of truth for business processes and IT infrastructure</li>
-                  <li>Initiate transformation in an agile way with a solid basis of data-driven understanding</li>
-                  <li>Obtain both quantitative and qualitative insights into business and IT</li>
-                </ul>
-              </div>
-
-              <div className={styles.stageCard}>
-                <div className={styles.stageNumber}>2</div>
-                <h3 className={styles.stageTitle}>Analyze and understand improvement areas</h3>
-                <p className={styles.stageText}>
-                  Use AI-powered process mining and analysis to identify bottlenecks, inefficiencies, and automation opportunities across your finance operations.
-                </p>
-              </div>
-
-              <div className={styles.stageCard}>
-                <div className={styles.stageNumber}>3</div>
-                <h3 className={styles.stageTitle}>Design your future state and build a robust plan</h3>
-                <p className={styles.stageText}>
-                  Leverage BPMN 2.0 modeling and AI recommendations to design optimized processes and create a detailed transformation roadmap.
-                </p>
-              </div>
-
-              <div className={styles.stageCard}>
-                <div className={styles.stageNumber}>4</div>
-                <h3 className={styles.stageTitle}>Implement and manage change</h3>
-                <p className={styles.stageText}>
-                  Deploy automated workflows, train teams, and manage the transition with comprehensive change management and monitoring tools.
-                </p>
-              </div>
-
-              <div className={styles.stageCard}>
-                <div className={styles.stageNumber}>5</div>
-                <h3 className={styles.stageTitle}>Operate and continuously improve</h3>
-                <p className={styles.stageText}>
-                  Monitor performance, gather insights, and iterate continuously with real-time analytics and AI-driven recommendations.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* ROI Calculator */}
+        <ROICalculator />
 
         {/* Trust Section */}
         <section className={styles.trustSection}>
@@ -338,59 +311,8 @@ export default function TransformationPage() {
           </div>
         </section>
 
-        {/* Customer Stories */}
-        <section className={styles.storiesSection}>
-          <div className={styles.container}>
-            <h2 className={styles.sectionTitle}>Learn more from our agencies</h2>
-
-            <div className={styles.storyGrid}>
-              <div className={styles.storyCard}>
-                <div className={styles.storyLogo}>RIM</div>
-                <h3 className={styles.storyTitle}>
-                  Aligning technology, processes, and architecture with strategic goals
-                </h3>
-                <p className={styles.storyText}>
-                  Explore RIM's journey with OpEx platform to unleash the power of process data for decision-making.
-                </p>
-                <Link href="/stories/rim" className={styles.storyLink}>
-                  Read the case study →
-                </Link>
-              </div>
-
-              <div className={styles.storyCard}>
-                <div className={styles.storyLogo}>CKVC</div>
-                <h3 className={styles.storyTitle}>
-                  Successful business transformation becomes reality
-                </h3>
-                <p className={styles.storyText}>
-                  Learn how CKVC succeeded in bringing business and IT together with a full picture of the enterprise.
-                </p>
-                <Link href="/stories/ckvc" className={styles.storyLink}>
-                  Read the case study →
-                </Link>
-              </div>
-
-              <div className={styles.storyCard}>
-                <div className={styles.storyLogo}>BOM</div>
-                <h3 className={styles.storyTitle}>
-                  Mapping processes and aligning them with IT systems
-                </h3>
-                <p className={styles.storyText}>
-                  Discover how BOM created transparency across operational processes and systems.
-                </p>
-                <Link href="/stories/bom" className={styles.storyLink}>
-                  Read the case study →
-                </Link>
-              </div>
-            </div>
-
-            <div className={styles.storiesCTA}>
-              <Link href="/stories" className={styles.buttonSecondary}>
-                Discover more case studies
-              </Link>
-            </div>
-          </div>
-        </section>
+        {/* Testimonial Carousel */}
+        <TestimonialCarousel />
 
         {/* What's New */}
         <section className={styles.newsSection}>

@@ -1,0 +1,82 @@
+.statsSection {
+  padding: 4rem 2rem;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.statCard {
+  background: white;
+  padding: 3rem 2rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.statCard:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  border-color: #0854A0;
+}
+
+.statIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.statValue {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #0854A0;
+  line-height: 1;
+  margin-bottom: 1rem;
+}
+
+.statLabel {
+  font-size: 1.1rem;
+  color: #6A6D70;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .statsSection {
+    padding: 3rem 1.5rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .statCard {
+    padding: 2rem 1.5rem;
+  }
+
+  .statValue {
+    font-size: 2.5rem;
+  }
+}
+
+[data-theme='dark'] .statCard {
+  background: #2A3138;
+  border-color: #475057;
+}
+
+[data-theme='dark'] .statCard:hover {
+  border-color: #1A6BB5;
+}
+
+[data-theme='dark'] .statValue {
+  color: #1A6BB5;
+}
+
+[data-theme='dark'] .statLabel {
+  color: #C0C0C0;
+}
