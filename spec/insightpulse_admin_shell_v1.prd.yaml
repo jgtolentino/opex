@@ -1,0 +1,234 @@
+id: insightpulse-admin-shell-v1
+title: InsightPulse Admin Shell v1
+version: 0.1.0
+owner: jake
+status: draft
+last_updated: "2025-11-17"
+
+# 1. Problem & Context
+problem_statement: >
+  The current Odoo CE/OCA backend is powerful but tightly coupled to its own web UI,
+  upsell flows, and legacy UX. Business users need a consistent, modern admin shell
+  across modules (T&E, PH tax, OpEx, Scout, CES, HRIS, CRM) that:
+  - Uses a unified design system,
+  - Talks to Supabase and Odoo via APIs,
+  - Integrates with n8n, Mattermost, and AI agents,
+  without being visually or architecturally tied to odoo.com.
+
+background:
+  drivers:
+    - Provide a single, branded admin console for all InsightPulse verticals.
+    - Decouple UX from Odoo web and keep Odoo CE/OCA as a backend service.
+    - Standardize on Ant Design + React patterns for faster delivery.
+    - Make Supabase the default analytics + AI-facing datastore.
+    - Let n8n orchestrate workflows instead of wiring them ad-hoc.
+  current_state:
+    - Odoo CE/OCA running with OCA modules and PH localization.
+    - Supabase used for RAG, analytics, and selected dashboards.
+    - n8n and Mattermost used for automations and ops channels.
+    - Multiple frontends / dashboards exist but are not unified under one shell.
+
+# 2. Goals & Non-goals
+goals:
+  - Ship a single Ant Design + Next.js admin shell that can host multiple modules:
+    T&E/Tax, OpEx, Scout/CES, CRM-lite, and HRIS views.
+  - Use Supabase as the primary data source for read-heavy pages, with Odoo and n8n feeding it.
+  - Provide clear hooks for AI agents (RAG, copilots) to augment pages without blocking v1.
+  - Ensure all navigation, theming, and layout are centralized, reusable, and easy to extend.
+  - Avoid any visual or network dependency on odoo.com (pure neutral UX).
+
+non_goals:
+  - Re-implement all Odoo UI features one-to-one in v1.
+  - Replace entire ERP functionality – focus on key admin/ops flows first.
+  - Build a public marketing site or client portal; this is an internal admin console.
+
+# 3. Personas
+personas:
+  - id: ops_owner
+    name: Operations / Finance Owner
+    needs:
+      - Single place to view T&E, tax status, OpEx tasks, and key KPIs.
+      - No need to log into multiple products or Odoo back-office screens.
+  - id: admin_builder
+    name: Admin / Platform Builder
+    needs:
+      - Faster way to add new pages and modules reusing components and layout.
+      - Clear data layer (Supabase hooks, Odoo Edge Functions).
+  - id: exec_viewer
+    name: Executive / Stakeholder
+    needs:
+      - Read-only dashboards and simple filters from one URL.
+      - No exposure to raw Odoo UI.
+  - id: ai_agent
+    name: AI Agent / Automation
+    needs:
+      - Stable JSON APIs and events to read/write data.
+      - Clear places to inject suggestions and insights into the UI.
+
+# 4. Scope & v1 Feature Set
+scope:
+  modules:
+    - dashboard:
+        description: "Top-level overview of key KPIs (T&E, tax, OpEx tasks, interactions)."
+    - te_tax_console:
+        description: "T&E + PH tax console: expenses list, validation status, and quick links to detail."
+    - opex_tasks:
+        description: "Month-end close / OpEx tasks pulled from Notion / Supabase."
+    - contacts_orgs:
+        description: "Basic contacts / orgs view powered by Supabase (future CRM alignment)."
+    - integrations:
+        description: "Read-only status page for Odoo, Supabase, n8n, Mattermost, and Edge Functions."
+    - settings:
+        description: "Per-user preferences (theme, AI features toggle) and admin-level config links."
+
+out_of_scope_for_v1:
+  - Full Scout/CES dashboard parity (keep separate specialized UIs for now).
+  - Multi-tenant org-level billing and subscription management.
+  - Full CRM pipeline; v1 only needs simple contacts/orgs read.
+
+# 5. Functional Requirements
+functional_requirements:
+  layout_and_navigation:
+    - "Use Ant Design Layout (Sider + Header + Content) with collapsible sidebar."
+    - "Global navigation items for: Dashboard, T&E & Tax, OpEx Tasks, Contacts, Integrations, Settings."
+    - "Support light/dark mode theme toggle (stored per user)."
+  auth_and_access:
+    - "Use Supabase Auth as default (email/password + SSO-ready)."
+    - "Store user profile and role flags in a Supabase `users` / `user_profiles` table."
+    - "Guard pages based on simple roles (admin, ops, viewer)."
+  data_layer:
+    - "Create a unified data layer in the frontend (e.g., `src/lib/api/supabase` and React Query hooks)."
+    - "Main reads should hit Supabase views; Odoo is accessed via Edge Functions (no direct DB)."
+  te_tax_console:
+    - "Display a table of expenses with fields: date, employee, amount, tax status, last validation summary."
+    - "Filter by date range, employee, and tax status."
+    - "Link out to Odoo expense detail (new tab) when needed."
+  opex_tasks:
+    - "List month-end tasks from Supabase or Notion-synced tables (via n8n)."
+    - "Support basic filters: period, owner, status."
+  contacts_orgs:
+    - "List contacts and organizations from Supabase."
+    - "Search by name/email; read-only in v1."
+  integrations_status:
+    - "Show simple status cards for Odoo, Supabase, n8n, Mattermost, Edge Functions."
+    - "Statuses pulled from a `system_status` table or ping endpoints via Edge Functions."
+  ai_hooks:
+    - "Provide UI placeholders/slots where AI insights can appear (e.g., a right-side drawer or panel)."
+    - "v1 only needs dummy text / placeholder function; real AI integration can be v1.1."
+
+# 6. Non-functional Requirements
+non_functional_requirements:
+  performance:
+    - "Initial page load (LCP) under 2.5s on a mid-range device over typical broadband."
+    - "Table interactions and filters should feel instant (< 300ms perceived)."
+  maintainability:
+    - "All UI components should be built with Ant Design components or thin wrappers."
+    - "Shared layout, navigation, and theming must live in a single place (Layout component + theme provider)."
+  security:
+    - "No direct DB access from frontend; all via Supabase client / Edge Functions."
+    - "RLS on Supabase tables must be enforced; admin actions restricted via roles."
+  branding:
+    - "No Odoo logos, links, or references inside the shell."
+    - "All branding should use InsightPulse design tokens (color, typography)."
+
+# 7. Architecture Overview
+architecture:
+  frontend:
+    framework: "Next.js 13/14 (app router)"
+    ui_library: "Ant Design"
+    styling: "AntD theming + CSS-in-JS (default) or CSS modules"
+  backend:
+    primary_data: "Supabase Postgres (tables, views, RLS)"
+    secondary_backend: "Odoo CE/OCA (via dedicated Edge Functions or n8n APIs)"
+  integrations:
+    n8n:
+      usage:
+        - "Sync Odoo → Supabase (expenses, contacts, tasks)."
+        - "Emit webhooks to Supabase/Next.js for cache invalidation or notifications."
+    mattermost:
+      usage:
+        - "Notification channel only for v1 (errors, sync issues, status alerts)."
+  data_flow_examples:
+    - "Odoo hr.expense → n8n → Supabase table `expenses` → Admin Shell T&E console."
+    - "Notion / CSV tasks → n8n → Supabase `opex_tasks` → Admin Shell OpEx page."
+    - "Odoo contacts → n8n → Supabase `contacts` → Admin Shell Contacts page."
+
+# 8. Data Model (high-level)
+data_model:
+  tables:
+    - name: expenses
+      purpose: "Flattened view of T&E expenses and tax status."
+      key_fields: ["id", "employee_id", "date", "amount", "ipai_last_tax_status", "ipai_last_tax_summary"]
+    - name: opex_tasks
+      purpose: "Month-end / OpEx tasks consolidated from Notion or CSV."
+      key_fields: ["id", "period", "title", "owner", "status", "due_date"]
+    - name: contacts
+      purpose: "Core contact list shared across CRM and other modules."
+      key_fields: ["id", "name", "email", "company", "phone"]
+    - name: system_status
+      purpose: "Latest status info for core systems."
+      key_fields: ["id", "system_name", "status", "last_checked", "details"]
+
+# 9. AI Integration Strategy (v1)
+ai_strategy:
+  v1:
+    - "Provide placeholders in UI for AI-generated insights (no hard dependency on AI to ship v1)."
+    - "Define simple contract for an AI insights API (e.g., `POST /ai/insights`), even if stubbed."
+  future_v1_1_plus:
+    - "Connect to existing RAG and agents (T&E tax copilot, OpEx assistant) using Supabase Edge Functions."
+    - "Let users trigger AI from specific pages (e.g. 'Explain this expense batch', 'Summarize this period')."
+
+# 10. Risks & Mitigations
+risks:
+  - id: r1
+    description: "Scope creep by trying to replace all Odoo screens in v1."
+    mitigation:
+      - "Keep v1 focused on read-heavy admin dashboards and key workflows only."
+  - id: r2
+    description: "Data duplication issues between Odoo and Supabase."
+    mitigation:
+      - "Define one-way sync patterns, clear source-of-truth rules, and n8n reconciliation flows."
+  - id: r3
+    description: "Fragmented design if Ant Design patterns are not enforced."
+    mitigation:
+      - "Create design-system guidelines and lint for non-AntD components in core UI."
+
+# 11. Success Metrics
+success_metrics:
+  - "≥ 70% of daily admin usage moves from Odoo web UI to the Admin Shell for targeted modules."
+  - "≥ 80% of T&E-related checks are done via the T&E console instead of raw Odoo screens."
+  - "Time to add a new data-driven page (list + filters) ≤ 1 day after v1."
+  - "Positive feedback from ops/finance users on clarity and speed vs old flows."
+
+# 12. Milestones
+milestones:
+  - id: m1
+    name: Shell & Layout
+    target_date: "2026-01-15"
+    items:
+      - "Set up Next.js + Ant Design shell with auth."
+      - "Implement navigation and settings page with theme toggle."
+  - id: m2
+    name: Supabase Integration
+    target_date: "2026-01-31"
+    items:
+      - "Wire Supabase client and RLS-safe views."
+      - "Implement basic data hooks and table components."
+  - id: m3
+    name: T&E + Tax Page
+    target_date: "2026-02-15"
+    items:
+      - "Ship T&E list page with filters and Odoo links."
+      - "Confirm full pipeline Odoo → n8n → Supabase → UI."
+  - id: m4
+    name: OpEx & Contacts
+    target_date: "2026-03-01"
+    items:
+      - "Ship OpEx tasks list page."
+      - "Ship basic Contacts page."
+  - id: m5
+    name: Integration Status & AI Hooks
+    target_date: "2026-03-15"
+    items:
+      - "Integration status page live."
+      - "AI insight placeholders wired into layout (no hard dependency on AI)."
