@@ -1,0 +1,284 @@
+id: te-ph-tax-copilot
+title: Odoo T&E + PH Tax Copilot (Agentic Architect–Owned)
+owner_agent: agentic-architect
+status: draft
+version: 0.1.0
+last_updated: "2025-11-17"
+
+links:
+  repo:
+    - name: insightpulse-odoo
+      url: https://github.com/<your-org>/insightpulse-odoo
+  related_specs:
+    - id: opex-rag
+      description: OpEx RAG + Supabase pgvector spec
+    - id: month-end-close-assistant
+      description: Month-end close bot and workflows
+
+# 1. Problem & Context
+problem_statement: >
+  Travel & Expense (T&E) and PH tax workflows (VAT, WHT, BIR forms) in Odoo CE
+  are highly manual and error-prone. Finance teams rely on external firms
+  (SGV, P&A, R.G. Manabat) and spreadsheet-based processes, increasing cost,
+  cycle time, and audit risk. We want an AI-powered copilot that:
+  - Reads receipts and expense data,
+  - Validates PH VAT/WHT rules,
+  - Grounds explanations in BIR regulations and internal SOPs,
+  - Surfaces anomalies in dashboards,
+  while keeping final numeric computation deterministic and auditable.
+
+background:
+  business_drivers:
+    - Reduce dependency on external tax firms for routine T&E + tax workflows.
+    - Shorten expense approval and month-end close cycles.
+    - Reduce tax computation errors and improve audit readiness.
+    - Provide explainable, PH tax–aware guidance to non-expert users.
+  current_state:
+    - Odoo CE + OCA modules for accounting and expenses.
+    - Supabase instance with pgvector and OpEx RAG partially live.
+    - DigitalOcean droplets for OCR and agent services.
+    - Superset dashboards for financial analytics.
+    - Mattermost as the primary chat/ops hub, n8n as automation orchestrator.
+  constraints:
+    - PH BIR compliance requirements and audit trails.
+    - Self-hosted, open-source stack preference (no vendor lock-in).
+    - Limited finance team bandwidth for large process change.
+
+# 2. Goals & Non-goals
+goals:
+  - Provide a chat-first T&E + PH tax copilot in Mattermost for finance and approvers.
+  - Automate receipt ingestion (OCR) and expense classification with high recall.
+  - Validate VAT and WHT according to PH rules using a deterministic rules engine.
+  - Ground explanations in BIR docs and internal SOPs via Supabase RAG.
+  - Surface anomalies and exceptions in Superset / Scout-style dashboards.
+  - Implement full ALM, monitoring, and feedback loops for continuous improvement.
+
+non_goals:
+  - Replace all PH tax firm activities (e.g., complex tax planning, audits).
+  - Fully automate filing to BIR portals in v1 (focus on prep + validation).
+  - Build a new ERP; Odoo CE remains the system of record.
+
+# 3. Personas & Users
+personas:
+  - id: employee
+    name: Employee / Cardholder
+    needs:
+      - Capture receipts quickly (mobile/email upload).
+      - Submit expenses with minimal manual data entry.
+  - id: approver
+    name: Manager / Approver
+    needs:
+      - See clean, pre-validated claims.
+      - Be alerted to anomalies or policy violations.
+  - id: finance
+    name: Finance / Tax Specialist
+    needs:
+      - Confident, deterministic tax computations.
+      - Clear flags for issues and audit trail of who did what.
+      - A copilot to explain BIR rules and internal policies.
+  - id: architect
+    name: Agentic Architect / Platform Owner
+    needs:
+      - Clear architecture, ALM, and observability.
+      - Ability to evolve agents, prompts, and rules safely.
+
+# 4. Use Cases & User Stories
+use_cases:
+  - id: te-01
+    title: Receipt ingestion and expense draft creation
+    stories:
+      - "As an employee, I can submit a photo/PDF of a receipt and get a draft expense in Odoo with vendor, date, amount, and likely tax treatment pre-filled."
+      - "As finance, I can see OCR confidence and manually override fields as needed."
+  - id: te-02
+    title: Tax validation and explanation
+    stories:
+      - "As finance, I can trigger a 'validate tax' check that runs PH VAT/WHT rules on an expense or batch."
+      - "As finance, I can ask in Mattermost 'Why is WHT 2% on this line?' and get a grounded explanation with BIR references."
+  - id: te-03
+    title: Anomaly detection and dashboards
+    stories:
+      - "As finance, I can view a Superset dashboard showing unusual vendors, out-of-policy claims, and missing tax data."
+      - "As a manager, I can see a monthly summary of my team's T&E patterns with flagged issues."
+  - id: te-04
+    title: Month-end close support
+    stories:
+      - "As finance, I can run a month-end checklist command in Mattermost to see T&E-related tasks and their status."
+      - "As finance, I can ask 'Are T&E entries reconciled for August?' and see a status summary from Odoo + Supabase."
+
+# 5. Functional Requirements
+functional_requirements:
+  ingestion:
+    - "Support upload of receipts via web/mobile (or email-to-inbox) to a DO-hosted OCR service."
+    - "Store raw images/files in secure object storage with metadata in Supabase."
+  ocr_and_extraction:
+    - "Use PaddleOCR or equivalent on DO droplets to extract text from receipts."
+    - "Map extracted fields into a normalized schema: vendor, date, amount, tax IDs, etc."
+  odoo_integration:
+    - "Create/Update draft expenses in Odoo CE via API with extracted fields."
+    - "Link each Odoo expense to the source document in Supabase/object storage."
+  tax_rules_engine:
+    - "Implement a deterministic PH VAT/WHT rules engine (Python or Odoo module)."
+    - "Rules engine must be the single source of truth for numeric tax outputs."
+  rag_and_explanations:
+    - "Ingest BIR forms, regulations, and internal SOPs into Supabase pgvector."
+    - "Provide a RAG-powered Q&A API that returns answers with citations."
+  mattermost_copilot:
+    - "Expose slash commands: /ask-tax, /validate-expense, /te-status, /te-anomalies."
+    - "Return structured responses (summary + links to Odoo, dashboards, or docs)."
+  n8n_orchestration:
+    - "Use n8n to orchestrate flows: receipt ingestion → OCR → Odoo → tax validation → notifications."
+    - "Expose webhooks for Mattermost slash commands and system events."
+  dashboards:
+    - "Build Superset dashboards for T&E anomalies, tax exposure, and reconciliation status."
+    - "Link from Mattermost responses directly into filtered dashboard views."
+
+# 6. Non-Functional Requirements
+non_functional_requirements:
+  performance:
+    - "OCR + draft creation pipeline p50 < 20 seconds per receipt."
+    - "Tax validation p95 < 5 seconds for a typical claim."
+  availability:
+    - "Core T&E copilot APIs 99.5% uptime monthly."
+  security:
+    - "RLS on Supabase for all PII and financial data."
+    - "Odoo access controlled by user groups; no bypass through AI endpoints."
+    - "No raw secrets in logs or Mattermost messages."
+  compliance:
+    - "Support BIR audit requirements: full traceability from expense to receipt to rules."
+    - "Retain logs and artifacts according to PH regulatory needs."
+  observability:
+    - "Centralized logging for n8n, OCR, RAG, and Odoo integration."
+    - "Metrics for flow success rate, latency, and AI vs manual overrides."
+
+# 7. Architecture (High-Level)
+architecture:
+  context:
+    - "Odoo CE + OCA as system of record for T&E and accounting."
+    - "Supabase as data/RAG hub and integration backbone."
+    - "DigitalOcean droplets for OCR and agent services."
+    - "Mattermost as chat interface; n8n as orchestrator."
+  components:
+    - name: ocr_service
+      description: PaddleOCR-based service receiving image uploads, returning structured text.
+    - name: te_extractor
+      description: Service that maps OCR text to normalized T&E + tax fields.
+    - name: odoo_connector
+      description: Integration layer (Edge Function or service) for Odoo read/write operations.
+    - name: tax_rules_engine
+      description: Deterministic PH VAT/WHT calculator (Python/Odoo module).
+    - name: rag_service
+      description: Supabase pgvector–backed RAG API for PH tax + SOP content.
+    - name: mattermost_bot
+      description: Slash command + bot integration for finance and approvers.
+    - name: n8n_workflows
+      description: Deployed n8n flows for ingestion, validation, notifications, and month-end support.
+    - name: dashboards
+      description: Superset dashboards powered by Supabase views.
+
+agents:
+  - id: ocr-agent
+    role: "Perform OCR on receipts and hand back normalized text."
+  - id: te-mapper-agent
+    role: "Transform OCR output into structured T&E records; suggest GL and tax codes."
+  - id: tax-validation-agent
+    role: "Broker between deterministic rules engine and user queries; never overrides rules."
+  - id: rag-tax-assistant
+    role: "Answer PH tax questions grounded in Supabase vector store."
+  - id: te-copilot-mattermost
+    role: "Frontline chat assistant for finance and approvers, calling other agents and workflows."
+  - id: month-end-close-agent
+    role: "Coordinate T&E-related tasks and status during month-end close."
+
+# 8. Data & RAG Strategy
+data_and_rag:
+  data_sources:
+    - "Odoo CE (expenses, journals, partners, tax codes)."
+    - "Supabase tables for receipts, OCR output, rules engine logs, AI feedback."
+    - "Supabase vector store for BIR docs and SOPs."
+  rag_design:
+    - "Split collections by domain: BIR legal texts, internal SOPs, worked examples."
+    - "Annotate chunks with doc type, date, and reliability."
+    - "Require citations in all RAG responses."
+  privacy_and_pii:
+    - "Avoid embedding raw TINs or sensitive identifiers; only embed text that does not break privacy rules."
+
+# 9. ALM, Environments & Governance
+alm:
+  environments:
+    - name: dev
+      description: "Local/low-risk environment with synthetic or masked data."
+    - name: staging
+      description: "Pre-prod mirror with constrained subset of real data."
+    - name: prod
+      description: "Live finance environment with full audit and access controls."
+  ci_cd:
+    - "All services and Edge Functions deployed via GitHub Actions."
+    - "Supabase migrations managed via SQL migration files; no ad-hoc changes."
+    - "n8n workflows exported and versioned in Git."
+    - "Mattermost bot config scripted (no manual one-off changes)."
+  governance:
+    - "Change approvals required for tax rules engine logic."
+    - "Security review for any new external APIs or models."
+    - "Access reviews for finance-related Mattermost channels and tools."
+
+# 10. Risks & Mitigations
+risks:
+  - id: r1
+    description: "LLM hallucinations about PH tax guidance."
+    mitigation:
+      - "Only use LLM for explanation; numeric results come from deterministic rules engine."
+      - "Include citations and warnings in responses."
+  - id: r2
+    description: "Misclassification of receipts leading to incorrect tax treatment."
+    mitigation:
+      - "Show confidence scores; route low-confidence cases to manual review."
+      - "Keep human-in-the-loop flows for all high-value expenses."
+  - id: r3
+    description: "Data leakage or privacy breach in logs or embeddings."
+    mitigation:
+      - "RLS, strict logging policy, and PII redaction before embedding."
+  - id: r4
+    description: "Operational complexity across multiple self-hosted components."
+    mitigation:
+      - "Standardized deployment scripts, monitoring, and runbooks."
+
+# 11. Success Metrics
+success_metrics:
+  - "≥ 60% of receipts fully processed with no manual data entry."
+  - "≥ 80% reduction in tax calculation errors vs baseline."
+  - "≥ 30% reduction in T&E-related month-end close time."
+  - "≥ 70% of finance users report 'helpful' for copilot answers in Mattermost."
+  - "Zero critical audit findings attributable to copilot automation."
+
+# 12. Milestones
+milestones:
+  - id: m1
+    name: Foundation
+    target_date: "2026-01-15"
+    items:
+      - "Stand up OCR service and Supabase tables for receipts and OCR output."
+      - "Implement base Odoo connector and simple n8n ingestion flow."
+  - id: m2
+    name: Tax Rules + RAG
+    target_date: "2026-02-15"
+    items:
+      - "Implement PH VAT/WHT rules engine and tests."
+      - "Ingest core BIR docs and internal SOPs into Supabase vector store."
+  - id: m3
+    name: Mattermost Copilot
+    target_date: "2026-03-01"
+    items:
+      - "Expose /ask-tax and /validate-expense commands."
+      - "Wire RAG + rules engine into responses."
+  - id: m4
+    name: Dashboards & Month-End
+    target_date: "2026-03-31"
+    items:
+      - "Ship Superset dashboards for anomalies and status."
+      - "Add month-end close flows and status checks in Mattermost."
+  - id: m5
+    name: Hardening & Rollout
+    target_date: "2026-04-30"
+    items:
+      - "Load tests, security review, and pilot with a subset of finance users."
+      - "Refine based on feedback; define v2 backlog."
