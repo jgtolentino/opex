@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  tax_rules_service:
+    build: .
+    container_name: tax_rules_service
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - tax_network
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: tax_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - tax_rules_service
+    networks:
+      - tax_network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  tax_network:
+    driver: bridge
