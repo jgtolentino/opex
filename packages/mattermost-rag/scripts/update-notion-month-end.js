@@ -8,8 +8,8 @@ const notion = new Client({
   auth: process.env.NOTION_API_KEY,
 });
 
-// The page ID from your October 2025 page
-const OCTOBER_2025_PAGE_ID = '7bf32e6a056948f687f55bdff1dd0931';
+// The page ID from your current month-end page
+const CURRENT_PAGE_ID = '8b1b3f0532ab45c6a7475ad04ff67979';
 
 async function updateMonthEndPage() {
   try {
@@ -17,7 +17,7 @@ async function updateMonthEndPage() {
 
     // Update the page title and properties for November 2025
     const response = await notion.pages.update({
-      page_id: OCTOBER_2025_PAGE_ID,
+      page_id: CURRENT_PAGE_ID,
       properties: {
         // Update the title to November 2025
         'Name': {
@@ -197,7 +197,7 @@ async function main() {
 async function getPageInfo() {
   try {
     const page = await notion.pages.retrieve({
-      page_id: OCTOBER_2025_PAGE_ID
+      page_id: CURRENT_PAGE_ID
     });
 
     console.log('📄 Page Information:');
