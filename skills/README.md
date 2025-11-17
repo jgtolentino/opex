@@ -95,6 +95,177 @@ Specialized agents for month-end closing, BIR tax compliance, and CPA exam prepa
   - Progress tracking (topics covered, weak areas, study plan)
   - Coverage heatmap (real work vs self-study)
 
+---
+
+## Finance-SmolLM3 Training System
+
+Specialized agents for training, deploying, and serving a domain-specific small language model (SmolLM3) fine-tuned for Philippine BIR tax form processing and Odoo 18 CE finance workflows.
+
+### 12. **DataPrepAgent** (`finance-smollm3-data-prep/`)
+- **Role**: Finance/BIR training data curator
+- **Focus**: ETL from Odoo 18 CE, Supabase, and OCR'd BIR documents → normalized training datasets
+- **Capabilities**:
+  - Extract data from Odoo (invoices, payments, journals, GL), Supabase (logs, workflows), and OCR pipeline
+  - Normalize records into consistent JSON instruction/response pairs (ChatML format)
+  - Anonymize sensitive fields (TINs, names, addresses) with stable hashing
+  - Generate reproducible training splits (train/valid/test) with no data leakage
+  - Enforce schema compliance and validation
+  - Version datasets with clear manifests
+- **Output**: JSONL training files ready for supervised fine-tuning
+
+### 13. **TrainerAgent** (`finance-smollm3-trainer/`)
+- **Role**: Finance-SmolLM3 model trainer
+- **Focus**: Orchestrate training jobs on DigitalOcean GPU droplets (H100/A100)
+- **Capabilities**:
+  - Configure training via `training_config.yaml` (hyperparameters, data paths, logging)
+  - Execute training runs with distributed training support
+  - Manage checkpoints and model versioning
+  - Track experiments with Weights & Biases, TensorBoard, MLflow
+  - Run hyperparameter tuning (learning rate, batch size, epochs)
+  - Generate run manifests with metrics (perplexity, loss, training time)
+  - Quality assurance (validation checks, overfitting detection, convergence monitoring)
+- **Output**: Trained model checkpoints ready for inference
+
+### 14. **InfraAgent** (`finance-smollm3-infra/`)
+- **Role**: DigitalOcean & Docker orchestrator
+- **Focus**: Infrastructure management for training and inference
+- **Capabilities**:
+  - Provision GPU droplets (H100/A100 for training, A100 for inference)
+  - Create and attach block storage volumes (persistent data/checkpoints)
+  - Configure VPC networking and firewall rules
+  - Deploy Docker containers for training/inference
+  - Auto-shutdown idle GPU resources to optimize costs (target: 120 hours/month GPU usage)
+  - Snapshot droplets before destroying (preserve state)
+  - Health monitoring and disaster recovery
+  - Cost tracking and budget alerts
+- **Output**: Production-ready infrastructure for Finance-SmolLM3 pipeline
+- **Cost Optimization**: 93% savings vs GPT-4 Turbo API ($828/month vs $12,000/month)
+
+### 15. **InferenceAgent** (`finance-smollm3-inference/`)
+- **Role**: Finance-SmolLM3 runtime manager
+- **Focus**: Serve trained models via high-performance inference APIs
+- **Capabilities**:
+  - Load model checkpoints into vLLM (fast inference engine)
+  - Configure serving parameters (INT8 quantization, batch size, GPU memory)
+  - Deploy models to production endpoints (REST/gRPC APIs)
+  - Manage model versioning and zero-downtime rollbacks
+  - Support batch inference for document processing
+  - Implement request queuing and rate limiting
+  - Monitor GPU utilization, latency, throughput, error rates
+  - Auto-scale based on load
+- **Performance**: 15-20 req/sec (H100), P99 latency < 500ms, 99.5% uptime target
+- **Output**: Live inference endpoints for BIR field extraction
+
+### 16. **VisionOCRAgent** (`finance-smollm3-vision-ocr/`)
+- **Role**: Finance document & BIR form OCR
+- **Focus**: Extract text from scanned PDFs, images, and photos using PaddleOCR
+- **Capabilities**:
+  - Perform OCR on BIR forms (1601-C, 2550M/Q, 1702-Q, 0619-E)
+  - Support multiple formats (PDF, PNG, JPG, TIFF)
+  - Classify document type and detect BIR form code from visual layout
+  - Normalize OCR output (clean text, preserve structure)
+  - Calculate confidence scores and assess image quality
+  - Flag low-quality documents for manual review (confidence < 0.80)
+  - Hybrid approach: PaddleOCR + MCP Vision for complex layouts
+  - Batch processing with parallel workers (4 workers default)
+- **Performance**: 1-3 seconds per page (CPU), 98% character-level accuracy
+- **Output**: Structured OCR results with detected fields and bounding boxes
+
+### 17. **BIRFormAgent** (`finance-smollm3-bir-form/`)
+- **Role**: BIR form field extractor & validator
+- **Focus**: Extract structured fields from OCR'd forms and validate against BIR rules
+- **Capabilities**:
+  - Extract fields using Finance-SmolLM3 model (via InferenceAgent)
+  - Fallback to regex extraction if model fails or low confidence
+  - Validate field formats (TIN, dates, amounts)
+  - Enforce BIR business rules (tax calculations, thresholds, deadlines)
+  - Cross-check related fields for consistency (e.g., Schedule 1 tax withheld = Part 1 Summary)
+  - Flag errors and anomalies for manual review
+  - Output to Odoo 18 CE (journal entries) and Supabase (logging)
+  - Trigger n8n workflows for approvals
+- **Validation Rules**: TIN format, period format, tax calculations, filing deadlines
+- **Output**: Validated structured data ready for ERP integration
+- **Cost**: $0.002 per form (96% savings vs GPT-4 API)
+
+### Finance-SmolLM3 Pipeline Architecture
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                  Finance-SmolLM3 Training Pipeline              │
+│                                                                 │
+│  ┌─────────────┐    ┌──────────────┐    ┌─────────────┐      │
+│  │ DataPrepAgent│───>│ TrainerAgent │───>│InferenceAgent│      │
+│  │  (ETL + Clean)│   │ (GPU Training)│   │ (vLLM Serving)│     │
+│  └─────────────┘    └──────────────┘    └─────────────┘      │
+│         │                   │                   │              │
+│         │                   │                   │              │
+│         ▼                   ▼                   ▼              │
+│  ┌───────────────────────────────────────────────────┐        │
+│  │           InfraAgent (DigitalOcean + Docker)       │        │
+│  │  - GPU Droplets (H100/A100)                       │        │
+│  │  - Block Storage (Checkpoints + Data)             │        │
+│  │  - Auto-shutdown (Cost Optimization)               │        │
+│  └───────────────────────────────────────────────────┘        │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│              Finance-SmolLM3 Production Pipeline                │
+│                                                                 │
+│  ┌─────────────┐    ┌──────────────┐    ┌─────────────┐      │
+│  │VisionOCRAgent│───>│ BIRFormAgent │───>│   Odoo 18   │      │
+│  │ (PaddleOCR)  │    │ (Extract +   │    │ (Journal    │      │
+│  │              │    │  Validate)   │    │  Entries)   │      │
+│  └─────────────┘    └──────┬───────┘    └─────────────┘      │
+│                             │                                  │
+│                             │ (calls)                           │
+│                             ▼                                  │
+│                    ┌─────────────────┐                         │
+│                    │ InferenceAgent  │                         │
+│                    │ (Finance-SmolLM3)│                        │
+│                    │ Port: 8000      │                         │
+│                    └─────────────────┘                         │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### Finance-SmolLM3 Workflow Example
+
+```
+User: "Process all October 2025 BIR Form 1601-C documents for RIM"
+           │
+           ▼
+  ┌──────────────────┐
+  │ VisionOCRAgent   │ → Download PDFs from Supabase storage
+  └────────┬─────────┘ → Perform OCR on 12 documents (parallel: 4 workers)
+           │           → Classify all as "1601-C" (confidence: 0.91 avg)
+           │           → Extract field candidates with bounding boxes
+           │           → Flag 1 doc for review (low confidence: 0.68)
+           ▼
+  Output: 12 OCR results → batch_bir_1601c_rim_2025_10.jsonl
+           │
+           ▼
+  ┌──────────────────┐
+  │  BIRFormAgent    │ → Load OCR results
+  └────────┬─────────┘ → Call InferenceAgent (Finance-SmolLM3 model)
+           │           → Extract structured fields from OCR text
+           │           → Validate formats (TIN, dates, amounts)
+           │           → Validate calculations (tax still due = withheld - remitted)
+           │           → Cross-check Schedule 1 vs Part 1 Summary
+           │           → Flag 1 doc with calculation mismatch
+           ▼
+  Validation: 11/12 passed, 1/12 failed
+           │
+           ▼
+  ┌──────────────────┐
+  │  Odoo 18 CE      │ → Create 11 journal entries (Bank journal)
+  └────────┬─────────┘ → Total tax withheld: PHP 2,062,500.00
+           │           → All entries posted to Oct 2025 period
+           │
+           ▼
+  ┌──────────────────┐
+  │  n8n Workflow    │ → Trigger manual review workflow for doc_005
+  └──────────────────┘ → Notify Finance Manager via Mattermost
+```
+
 ## Architecture
 
 ### BPM + Finance Agent Ecosystem
