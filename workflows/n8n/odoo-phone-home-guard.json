@@ -1,0 +1,287 @@
+{
+  "name": "Odoo Phone-Home Guard",
+  "nodes": [
+    {
+      "id": "cron_trigger_001",
+      "name": "Every Hour Check",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "timezone": "Asia/Manila"
+      },
+      "webhookId": ""
+    },
+    {
+      "id": "postgres_check_001",
+      "name": "Check for IAP/Enterprise Modules",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [560, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Check for forbidden modules that are currently installed\nSELECT \n  name,\n  state,\n  latest_version,\n  installed_version,\n  author,\n  website\nFROM ir_module_module\nWHERE state = 'installed'\n  AND (\n    -- IAP modules (in-app purchase / phone-home)\n    name LIKE 'iap_%'\n    OR name LIKE '%_iap'\n    \n    -- Known Enterprise modules that require odoo.com\n    OR name IN (\n      'account_invoice_extract',\n      'sale_subscription',\n      'marketing_automation',\n      'documents_spreadsheet',\n      'odoo_enterprise',\n      'web_enterprise',\n      'account_accountant',\n      'helpdesk',\n      'planning',\n      'approvals',\n      'documents',\n      'sign',\n      'voip',\n      'social_push_notifications'\n    )\n    \n    -- Modules with 'enterprise' in the name\n    OR name LIKE '%_enterprise'\n    OR name LIKE 'enterprise_%'\n  )\nORDER BY name;",
+        "additionalFields": {
+          "mode": "list"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Odoo PostgreSQL"
+        }
+      }
+    },
+    {
+      "id": "function_summarize_001",
+      "name": "Summarize Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2,
+      "position": [820, 300],
+      "parameters": {
+        "functionCode": "// Summarize the query results\nconst rows = items;\n\nif (!rows || rows.length === 0) {\n  // No forbidden modules found\n  return [{\n    json: {\n      hasForbidden: false,\n      count: 0,\n      modules: [],\n      timestamp: new Date().toISOString(),\n      status: 'clean'\n    }\n  }];\n}\n\n// Extract module names and details\nconst modules = rows.map(item => ({\n  name: item.json.name,\n  state: item.json.state,\n  version: item.json.installed_version || item.json.latest_version,\n  author: item.json.author,\n  website: item.json.website\n}));\n\n// Categorize by type\nconst iapModules = modules.filter(m => \n  m.name.includes('iap_') || m.name.includes('_iap')\n);\n\nconst enterpriseModules = modules.filter(m => \n  m.name.includes('enterprise') || \n  ['account_accountant', 'helpdesk', 'planning', 'approvals', 'documents', 'sign', 'voip'].includes(m.name)\n);\n\nconst onlineServiceModules = modules.filter(m =>\n  ['account_invoice_extract', 'sale_subscription', 'social_push_notifications'].includes(m.name)\n);\n\nreturn [{\n  json: {\n    hasForbidden: true,\n    count: modules.length,\n    modules: modules,\n    categories: {\n      iap: iapModules,\n      enterprise: enterpriseModules,\n      onlineServices: onlineServiceModules\n    },\n    timestamp: new Date().toISOString(),\n    status: 'violation_detected'\n  }\n}];"
+      }
+    },
+    {
+      "id": "if_forbidden_001",
+      "name": "Any Forbidden Modules?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition_001",
+              "leftValue": "={{ $json.hasForbidden }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "mattermost_alert_001",
+      "name": "Send Mattermost Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "REPLACE_WITH_YOUR_MATTERMOST_WEBHOOK_URL",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \":warning: **Odoo Phone-Home Guard** detected {{ $json.count }} forbidden module(s) installed.\",\n  \"channel\": \"opex-alerts\",\n  \"username\": \"Odoo Security Guard\",\n  \"icon_emoji\": \":shield:\",\n  \"attachments\": [\n    {\n      \"color\": \"#FF0000\",\n      \"title\": \"Forbidden Modules Detected\",\n      \"text\": \"The following modules may connect to odoo.com or require Enterprise licensing:\",\n      \"fields\": [\n        {\n          \"title\": \"Total Count\",\n          \"value\": \"{{ $json.count }}\",\n          \"short\": true\n        },\n        {\n          \"title\": \"Status\",\n          \"value\": \"{{ $json.status }}\",\n          \"short\": true\n        },\n        {\n          \"title\": \"IAP Modules\",\n          \"value\": \"{{ $json.categories.iap.length }}\",\n          \"short\": true\n        },\n        {\n          \"title\": \"Enterprise Modules\",\n          \"value\": \"{{ $json.categories.enterprise.length }}\",\n          \"short\": true\n        },\n        {\n          \"title\": \"Module Names\",\n          \"value\": \"{{ $json.modules.map(m => `\\\\n• ${m.name} (${m.version})`).join('') }}\",\n          \"short\": false\n        }\n      ],\n      \"footer\": \"InsightPulse OpEx Platform\",\n      \"footer_icon\": \"https://insightpulseai.net/favicon.ico\",\n      \"ts\": \"{{ Math.floor(Date.now() / 1000) }}\"\n    }\n  ],\n  \"props\": {\n    \"card\": \"{\n      \\\"header\\\": \\\"Odoo Security Alert\\\",\n      \\\"body\\\": \\\"Please review and uninstall forbidden modules immediately.\\\"\n    }\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "log_violation_001",
+      "name": "Log to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 140],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/odoo_security_violations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"violation_type\": \"forbidden_module_installed\",\n  \"severity\": \"high\",\n  \"module_count\": {{ $json.count }},\n  \"modules\": {{ JSON.stringify($json.modules) }},\n  \"categories\": {{ JSON.stringify($json.categories) }},\n  \"detected_at\": \"{{ $json.timestamp }}\",\n  \"status\": \"{{ $json.status }}\",\n  \"environment\": \"production\"\n}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_SUPABASE_HEADER_AUTH_CREDENTIAL",
+          "name": "Supabase API Key"
+        }
+      }
+    },
+    {
+      "id": "no_violation_log_001",
+      "name": "Log Clean Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 380],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/odoo_security_checks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"check_type\": \"phone_home_guard\",\n  \"status\": \"{{ $json.status }}\",\n  \"module_count\": {{ $json.count }},\n  \"checked_at\": \"{{ $json.timestamp }}\",\n  \"environment\": \"production\"\n}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_SUPABASE_HEADER_AUTH_CREDENTIAL",
+          "name": "Supabase API Key"
+        }
+      }
+    },
+    {
+      "id": "manual_trigger_001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [260, 180],
+      "parameters": {},
+      "webhookId": ""
+    },
+    {
+      "id": "merge_triggers_001",
+      "name": "Merge Triggers",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [400, 240],
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Every Hour Check": {
+      "main": [
+        [
+          {
+            "node": "Merge Triggers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Triggers",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Triggers": {
+      "main": [
+        [
+          {
+            "node": "Check for IAP/Enterprise Modules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for IAP/Enterprise Modules": {
+      "main": [
+        [
+          {
+            "node": "Summarize Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Results": {
+      "main": [
+        [
+          {
+            "node": "Any Forbidden Modules?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Forbidden Modules?": {
+      "main": [
+        [
+          {
+            "node": "Send Mattermost Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Clean Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "Asia/Manila",
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "odoo-security",
+      "name": "Odoo Security"
+    },
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "monitoring",
+      "name": "Monitoring"
+    }
+  ],
+  "triggerCount": 2,
+  "updatedAt": "2025-01-18T00:00:00.000Z",
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "insightpulse-opex"
+  },
+  "id": "odoo-phone-home-guard",
+  "description": "Monitors Odoo instance for forbidden IAP/Enterprise modules that may phone home to odoo.com. Alerts via Mattermost and logs violations to Supabase."
+}
