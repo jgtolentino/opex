@@ -12,10 +12,10 @@ Format loosely follows [Keep a Changelog] concepts:
 
 ### Added
 - Planned:
-  - Integration of agents, design system, docs, and automation into a unified monorepo.
-  - Supabase + Odoo CE/OCA as the core data platform.
-  - n8n, Deepnote, and Mattermost as primary automation and collaboration channels.
-  - Spec-Kit-style specs for major features under `.specify/specs/**`.
+  - Design system tokens, themes, and shared components (Phase 2).
+  - Application scaffolding: OpEx Portal, Data Lab UI, Docs Site (Phase 3).
+  - MCP server configurations and agent playbooks (Phase 4).
+  - Full CI/CD automation and health monitoring (Phase 5).
 
 ### Changed
 - N/A yet (use this section when modifying existing behaviour).
@@ -25,6 +25,35 @@ Format loosely follows [Keep a Changelog] concepts:
 
 ### Removed
 - N/A yet.
+
+---
+
+## [0.2.0] – Phase 1: Code Migration
+
+**Date:** 2025-11-18
+
+### Added
+- **Platform Components Migrated:**
+  - Supabase: 4 SQL migrations, 8 Edge Functions, schema docs → `platform/supabase/`
+  - Odoo: `ipai_branding_cleaner` module (AGPL-3) → `platform/odoo/addons/`
+- **Agents & Skills:**
+  - 11 skills migrated from `.claude/skills/` → `agents/skills/`
+  - Agent registry: `agents/registry/agents.yaml` (6 agents defined)
+  - Skills registry: `agents/registry/skills.yaml` (11 skills cataloged)
+- **Documentation:**
+  - Root `README.md` with quick start, structure, roadmap
+  - README files for all major directories: apps, platform, agents, design-system, automation, infra
+  - Architecture overview: `docs/insightpulse/architecture/overview.md`
+  - n8n workflow documentation: `automation/n8n/README.md`
+
+### Changed
+- Updated root README.md to reflect monorepo structure and Phase 1 status.
+
+### Fixed
+- N/A.
+
+### Removed
+- Removed `.gitkeep` files from directories now containing actual code.
 
 ---
 
