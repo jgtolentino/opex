@@ -1,141 +1,143 @@
-# OPEX Infrastructure
+# Infrastructure
 
-Infrastructure as Code and DevOps tooling for the OPEX project.
+Infrastructure as code, environment templates, and deployment configurations.
 
-## Contents
-
-### InfraAuditor (`auditor/`)
-
-A comprehensive infrastructure auditing and fixing tool for:
-- **DNS Records** (DigitalOcean)
-- **Supabase Configuration** (Database, RLS, Functions, Storage)
-
-**Quick Start:**
-```bash
-cd auditor
-./setup.sh
-python infra_auditor.py --audit-only
-```
-
-**Documentation:**
-- [Full Documentation](auditor/README.md)
-- [Quick Start Guide](auditor/QUICKSTART.md)
-
-**Key Features:**
-- ✅ Safe, dry-run first approach
-- ✅ Explicit confirmation gates for changes
-- ✅ Comprehensive diff reporting
-- ✅ Automatic fix plan generation
-- ✅ Complete audit logging
-
-## Directory Structure
+## Structure
 
 ```
 infra/
-├── auditor/               # InfraAuditor tool
-│   ├── infra_auditor.py  # Main orchestrator
-│   ├── dns_auditor.py    # DNS auditing
-│   ├── supabase_auditor.py # Supabase auditing
-│   ├── config/           # Configuration templates
-│   │   ├── *.example.yaml
-│   │   └── opex_infra_spec.yaml
-│   ├── setup.sh          # Installation script
-│   ├── README.md         # Full documentation
-│   └── QUICKSTART.md     # Quick start guide
-└── README.md             # This file
+├── terraform/          # Cloud infrastructure definitions
+├── k8s/                # Kubernetes manifests (if applicable)
+├── docker/             # Docker Compose files
+└── env-templates/      # .env file examples
 ```
 
-## Use Cases
+## Docker
 
-### 1. Audit Current Infrastructure
+**Status:** Planned (Phase 4)
 
+Docker Compose for local development stack.
+
+### `docker/docker-compose.dev.yml`
+
+Services:
+- Supabase (local via supabase/supabase)
+- Odoo CE + PostgreSQL
+- n8n
+- (Optional) Mattermost, Deepnote alternatives
+
+**Usage:**
 ```bash
-cd auditor
-python infra_auditor.py --audit-only
+cd infra/docker
+docker-compose -f docker-compose.dev.yml up -d
 ```
 
-### 2. Add New DNS Record
+## Environment Templates
 
+**Status:** Planned (Phase 4)
+
+Example `.env` files in `env-templates/`:
+
+### `.env.opex.example`
+Environment variables for OpEx Portal:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `OPENAI_API_KEY`
+- `MATTERMOST_WEBHOOK_URL`
+
+### `.env.supabase.example`
+Supabase-specific variables:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_KEY`
+- `SUPABASE_DB_PASSWORD`
+
+### `.env.odoo.example`
+Odoo-specific variables:
+- `ODOO_ADMIN_PASSWORD`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `ODOO_DATABASE`
+
+**Usage:**
+1. Copy template to `.env`: `cp env-templates/.env.opex.example .env`
+2. Fill in actual values
+3. Never commit `.env` to git
+
+## Terraform
+
+**Status:** Optional (Phase 4+)
+
+Infrastructure as code for cloud deployments.
+
+### Planned Resources
+
+- Vercel projects (apps)
+- Supabase projects
+- Cloud storage (S3, GCS)
+- Monitoring (DataDog, Sentry)
+- Secrets management (AWS Secrets Manager, Vault)
+
+**Usage:**
 ```bash
-# Edit config
-vim auditor/config/opex_infra_spec.yaml
-
-# Preview changes
-python auditor/infra_auditor.py
-
-# Apply
-python auditor/infra_auditor.py --confirm-apply
+cd infra/terraform
+terraform init
+terraform plan
+terraform apply
 ```
 
-### 3. Deploy Supabase Edge Function
+## Kubernetes
 
+**Status:** Optional (Phase 4+)
+
+Kubernetes manifests for production deployment (if needed).
+
+### Planned Manifests
+
+- Odoo deployment + service
+- n8n deployment + service
+- Ingress controllers
+- ConfigMaps and Secrets
+
+**Usage:**
 ```bash
-# InfraAuditor will detect undeployed functions
-python auditor/infra_auditor.py --confirm-apply
+kubectl apply -f infra/k8s/
 ```
 
-### 4. Verify Schema Matches Migrations
+## Security
 
-```bash
-python auditor/infra_auditor.py --audit-only
-# Check output for schema drift
-```
+- **Never commit secrets** - Use `.env` files, secret managers, or environment variables
+- **Rotate credentials** regularly
+- **Use IAM roles** where possible instead of long-lived keys
+- **Encrypt sensitive data** at rest and in transit
 
-## Integration with OPEX
+## Deployment Environments
 
-The InfraAuditor is pre-configured for the OPEX project:
+### Local Development
+- Docker Compose (`docker/docker-compose.dev.yml`)
+- Local Supabase (`supabase start`)
 
-- **DNS**: `insightpulseai.net` domain management
-- **Supabase**: Project `ublqmilcjtpnflofprkr`
-- **Edge Functions**: RAG query, embedding worker, maintenance
-- **Database**: Documents, embeddings, queries tables
+### Staging
+- Vercel preview deployments (PRs)
+- Supabase staging project
+- Test data and sandboxed environments
 
-See `auditor/config/opex_infra_spec.yaml` for the current configuration.
+### Production
+- Vercel production (main branch)
+- Supabase production project
+- Full monitoring and alerting
 
-## CI/CD Integration
+## Monitoring & Observability
 
-Add to your GitHub Actions or other CI/CD:
+**Planned:**
+- Supabase metrics
+- Vercel analytics
+- n8n workflow logs
+- Custom health dashboards (Data Lab UI)
+- Mattermost alerts
 
-```yaml
-- name: Audit Infrastructure
-  run: |
-    cd infra/auditor
-    python infra_auditor.py --audit-only
+## References
 
-- name: Check for drift
-  run: |
-    cd infra/auditor
-    if grep -q "Issues Found: 0" infra_auditor_report.md; then
-      echo "No infrastructure drift detected"
-    else
-      echo "Infrastructure drift detected!"
-      cat infra_auditor_report.md
-      exit 1
-    fi
-```
-
-## Prerequisites
-
-- Python 3.8+
-- `doctl` (DigitalOcean CLI)
-- `supabase` (Supabase CLI)
-- `psql` (PostgreSQL client)
-
-See [auditor/README.md](auditor/README.md) for detailed installation instructions.
-
-## Contributing
-
-1. Test changes with `--audit-only` first
-2. Review generated commands before applying
-3. Document any new configuration options
-4. Update example configs as needed
-
-## Support
-
-- InfraAuditor Documentation: [auditor/README.md](auditor/README.md)
-- Quick Start: [auditor/QUICKSTART.md](auditor/QUICKSTART.md)
-- Configuration Examples: `auditor/config/*.example.yaml`
-
-## License
-
-See main repository LICENSE.
+- **Docker Documentation:** https://docs.docker.com/
+- **Terraform Documentation:** https://www.terraform.io/docs
+- **Kubernetes Documentation:** https://kubernetes.io/docs/
+- **Specs:** `.specify/specs/**`

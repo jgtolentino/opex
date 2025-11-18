@@ -1,0 +1,162 @@
+# Skills Registry
+# This file catalogs all available skills in the InsightPulse Platform
+# Version: 1.0.0
+
+skills:
+  # BPM Skills
+  - id: bpm_copywriter
+    name: BPM Copywriter
+    domain: bpm
+    description: Specialized copywriting for business process management documentation and training materials
+    path: agents/skills/bpm_copywriter/SKILL.md
+    tags:
+      - bpm
+      - copywriting
+      - documentation
+    status: active
+    version: 1.0.0
+
+  - id: bpm_knowledge_agent
+    name: BPM Knowledge Agent
+    domain: bpm
+    description: Knowledge management and information architecture for business processes
+    path: agents/skills/bpm_knowledge_agent/SKILL.md
+    tags:
+      - bpm
+      - knowledge-management
+      - information-architecture
+    status: active
+    version: 1.0.0
+
+  - id: bpm_learning_designer
+    name: BPM Learning Designer
+    domain: bpm
+    description: Instructional design and learning path creation for business process training
+    path: agents/skills/bpm_learning_designer/SKILL.md
+    tags:
+      - bpm
+      - learning-design
+      - training
+    status: active
+    version: 1.0.0
+
+  - id: bpm_transformation_partner
+    name: BPM Transformation Partner
+    domain: bpm
+    description: Strategic guidance for business process transformation initiatives
+    path: agents/skills/bpm_transformation_partner/SKILL.md
+    tags:
+      - bpm
+      - transformation
+      - change-management
+    status: active
+    version: 1.0.0
+
+  # Leadership & Strategy Skills
+  - id: cto_mentor
+    name: CTO Mentor
+    domain: strategy
+    description: CTO-level guidance for AI-first products, platforms, and org design
+    path: agents/skills/cto_mentor/SKILL.md
+    tags:
+      - strategy
+      - architecture
+      - ai
+      - platform
+      - org-design
+    status: active
+    version: 1.0.0
+    owner: InsightPulseAI
+
+  # InsightPulse Data Lab Skills
+  - id: insightpulse-superset-platform-admin
+    name: InsightPulse Superset Platform Admin
+    domain: data-lab
+    description: Deploy, upgrade, and operate the InsightPulse Superset-based BI platform
+    path: agents/skills/insightpulse-superset-platform-admin/SKILL.md
+    tags:
+      - data-lab
+      - superset
+      - platform
+      - admin
+      - ops
+    status: active
+    version: 1.0.0
+    linked_specs:
+      - .specify/specs/001-insightpulseai-data-lab/
+
+  - id: insightpulse-superset-api-ops
+    name: InsightPulse Superset API Ops
+    domain: data-lab
+    description: Manage workspaces, users, datasets, charts, and dashboards via Superset APIs
+    path: agents/skills/insightpulse-superset-api-ops/SKILL.md
+    tags:
+      - data-lab
+      - superset
+      - api
+      - automation
+    status: active
+    version: 1.0.0
+
+  - id: insightpulse-superset-embedded-analytics
+    name: InsightPulse Superset Embedded Analytics
+    domain: data-lab
+    description: Configure embedded Superset dashboards with theming, RLS, SSO
+    path: agents/skills/insightpulse-superset-embedded-analytics/SKILL.md
+    tags:
+      - data-lab
+      - superset
+      - embedded
+      - analytics
+    status: active
+    version: 1.0.0
+
+  - id: insightpulse-superset-user-enablement
+    name: InsightPulse Superset User Enablement
+    domain: data-lab
+    description: Create onboarding, training, and enablement flows for Superset users
+    path: agents/skills/insightpulse-superset-user-enablement/SKILL.md
+    tags:
+      - data-lab
+      - superset
+      - training
+      - enablement
+    status: active
+    version: 1.0.0
+
+  - id: insightpulse-deepnote-data-lab
+    name: InsightPulse Deepnote Data Lab
+    domain: data-lab
+    description: Design and operate Deepnote projects for data exploration and jobs
+    path: agents/skills/insightpulse-deepnote-data-lab/SKILL.md
+    tags:
+      - data-lab
+      - deepnote
+      - notebooks
+      - data-jobs
+    status: active
+    version: 1.0.0
+
+  - id: insightpulse-echarts-viz-system
+    name: InsightPulse ECharts Viz System
+    domain: data-lab
+    description: Standardize and implement ECharts visualizations and themes
+    path: agents/skills/insightpulse-echarts-viz-system/SKILL.md
+    tags:
+      - data-lab
+      - echarts
+      - visualization
+      - theming
+    status: active
+    version: 1.0.0
+
+metadata:
+  last_updated: "2025-11-18"
+  schema_version: "1.0"
+  total_skills: 11
+  domains:
+    - bpm
+    - strategy
+    - data-lab
+    - design
+    - odoo

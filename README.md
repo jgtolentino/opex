@@ -1,280 +1,261 @@
-# JakeVoiceDev - Voice RAG + Coding Assistant
+# InsightPulse Platform
 
-A voice-first AI assistant powered by the OpenAI Agents SDK, combining:
-- **Voice I/O** (speak naturally, get spoken responses)
-- **RAG** (query your Scout/InsightPulse/Odoo/Supabase docs)
-- **Coding help** (Odoo CE/OCA, Supabase, general dev)
-- **Personal assistant** (task creation, planning, summaries)
+**Version:** 1.0.0  
+**Status:** Active Development (Phase 1)  
+**License:** MIT (apps), AGPL-3 (Odoo modules)
 
-Based on the [OpenAI Agents SDK voice agents cookbook](https://github.com/openai/openai-cookbook/tree/main/examples/agents_sdk).
-
-## Features
-
-### Voice Interaction
-- **STT**: OpenAI `gpt-4o-transcribe` (no local Whisper needed)
-- **TTS**: OpenAI `gpt-4o-mini-tts` (no macOS `say` needed)
-- **Pipeline**: Single integrated voice loop via Agents SDK
-
-### Tools Available
-1. **Web Search** - Real-time web search for current info
-2. **Scout/InsightPulse Docs** - Query your Scout documentation (RAG stub ready)
-3. **Odoo Knowledge** - Search Odoo CE/OCA dev knowledge (RAG stub ready)
-4. **Supabase Docs** - Query Supabase best practices (RAG stub ready)
-5. **Task Creation** - Personal assistant task/note management
-
-### Agent Behavior
-- Conversational but concise (optimized for listening)
-- Calls tools automatically when helpful
-- Can handle coding questions, planning, clarifications
-- Multi-turn context awareness
-
-## Setup
-
-### 1. Prerequisites
-
-- Python 3.9+
-- OpenAI API key
-- Microphone and speakers/headphones
-
-### 2. Install Dependencies
-
-```bash
-# Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install packages
-pip install -r requirements.txt
-```
-
-### 3. Set OpenAI API Key
-
-```bash
-export OPENAI_API_KEY="sk-your-key-here"
-```
-
-Or use a `.env` file:
-
-```bash
-echo "OPENAI_API_KEY=sk-your-key-here" > .env
-```
-
-Then modify `voice_agent.py` to load it:
-
-```python
-from dotenv import load_dotenv
-load_dotenv()
-```
-
-## Usage
-
-### Basic Run
-
-```bash
-python voice_agent.py
-```
-
-### Interaction Flow
-
-1. **Start**: Script starts and waits for you
-2. **Press Enter**: Begin recording your query
-3. **Speak**: Ask your question naturally
-4. **Press Enter**: Stop recording
-5. **Listen**: Agent processes and speaks the response
-6. **Repeat**: Continue with follow-up questions
-
-### Example Queries
-
-**Personal Assistant:**
-- "Create a high priority task to review the Scout analytics dashboard"
-- "Summarize what I should focus on today for the CES project"
-
-**Coding Help:**
-- "How do I set up row-level security in Supabase for a multi-tenant app?"
-- "What's the best way to extend an Odoo CE purchase order model?"
-- "Search the web for the latest Supabase realtime features"
-
-**RAG Queries:**
-- "What does our Scout documentation say about data visualization?"
-- "Look up how InsightPulse handles report generation"
-
-**General:**
-- "What are the OWASP top 10 for 2024?"
-- "Explain the difference between Postgres RLS and application-level auth"
-
-## Customization
-
-### Wire Up RAG Backends
-
-The script has placeholder functions in `voice_agent.py`:
-- `query_scout_docs()`
-- `query_odoo_knowledge()`
-- `query_supabase_docs()`
-
-Replace the placeholders with actual calls to your Supabase vector search:
-
-```python
-@function_tool
-def query_scout_docs(query: str) -> str:
-    """Search Scout / InsightPulse documentation."""
-    from supabase import create_client
-
-    supabase = create_client(
-        os.getenv("SUPABASE_URL"),
-        os.getenv("SUPABASE_KEY")
-    )
-
-    # Example: call your edge function
-    result = supabase.rpc('search_scout_docs', {'query': query}).execute()
-
-    # Format and return top results
-    docs = result.data[:3]  # top 3 chunks
-    return "\n".join([doc['content'] for doc in docs])
-```
-
-### Add More Tools
-
-Add any `@function_tool` decorated function to the `voice_agent` tools list:
-
-```python
-@function_tool
-def deploy_to_staging(service: str) -> str:
-    """Deploy a service to staging environment."""
-    # Your deployment logic
-    return f"Deployed {service} to staging"
-
-voice_agent = Agent(
-    # ...
-    tools=[
-        WebSearchTool(search_context_size="low"),
-        query_scout_docs,
-        deploy_to_staging,  # Add here
-        # ...
-    ],
-)
-```
-
-### Adjust Agent Personality
-
-Edit `VOICE_ASSISTANT_INSTRUCTIONS` in `voice_agent.py` to change tone, verbosity, or domain focus.
-
-### Change Model
-
-The default is `gpt-4o-mini` for cost efficiency. For better reasoning, switch to `gpt-4o`:
-
-```python
-voice_agent = Agent(
-    # ...
-    model="gpt-4o",  # More capable, higher cost
-)
-```
-
-## Architecture
-
-```
-┌─────────────┐
-│  Your Mic   │
-└──────┬──────┘
-       │ Audio
-       ▼
-┌─────────────────────┐
-│  VoicePipeline      │
-│  - STT (gpt-4o)     │
-│  - Workflow Router  │
-└──────┬──────────────┘
-       │ Text
-       ▼
-┌─────────────────────┐
-│  JakeVoiceDev       │
-│  Agent              │
-│  - Instructions     │
-│  - Tools (RAG, etc) │
-│  - Model (4o-mini)  │
-└──────┬──────────────┘
-       │ Response Text
-       ▼
-┌─────────────────────┐
-│  VoicePipeline      │
-│  - TTS (4o-mini)    │
-└──────┬──────────────┘
-       │ Audio
-       ▼
-┌─────────────┐
-│ Your Speaker│
-└─────────────┘
-```
-
-## Next Steps
-
-### Immediate
-1. **Test the basics**: Run `python voice_agent.py` and try a few queries
-2. **Wire up RAG**: Connect `query_scout_docs` to your Supabase vector search
-3. **Add task backend**: Connect `create_task_note` to your task management system
-
-### Advanced
-1. **Multi-agent routing**: Add a triage agent for complex workflows (like NotebookLM deep research)
-2. **Memory/context**: Persist conversation history across sessions
-3. **Streaming improvements**: Add visual feedback (waveform, transcription display)
-4. **Tool expansions**: Add code execution, file operations, etc.
-
-### Integration with Claude Code CLI
-
-This voice agent complements your existing Claude Code CLI workflow:
-- **Voice agent**: Quick queries, planning, documentation lookup
-- **Claude Code**: Deep implementation, file editing, git operations
-
-Example workflow:
-1. Ask voice agent: "What's the best approach to add RLS to my Supabase tables?"
-2. Listen to summary and suggestions
-3. Switch to Claude Code CLI: "Implement RLS based on the approach we just discussed"
-
-## Troubleshooting
-
-### Audio Issues
-
-**No microphone detected:**
-```bash
-python -m sounddevice
-```
-Should list your audio devices. Set default if needed.
-
-**Permission denied (macOS):**
-System Preferences → Security & Privacy → Microphone → Allow Terminal/iTerm
-
-### API Issues
-
-**OpenAI API errors:**
-- Check `OPENAI_API_KEY` is set correctly
-- Verify API key has sufficient credits
-- Check rate limits if getting 429 errors
-
-### Installation Issues
-
-**`openai-agents` not found:**
-```bash
-pip install --upgrade openai openai-agents
-```
-
-**Audio library errors (Linux):**
-```bash
-sudo apt-get install portaudio19-dev python3-pyaudio
-pip install --upgrade sounddevice
-```
-
-## Resources
-
-- [OpenAI Agents SDK Docs](https://github.com/openai/openai-agents)
-- [Voice Agents Cookbook](https://github.com/openai/openai-cookbook/tree/main/examples/agents_sdk)
-- [Supabase Vector Search](https://supabase.com/docs/guides/ai)
-- [Claude Code CLI](https://github.com/anthropics/claude-code)
-
-## License
-
-MIT (or whatever your opex project uses)
+A unified monorepo for the InsightPulse AI operations and analytics platform, consolidating apps, platform components, agents, design system, docs, and automation.
 
 ---
 
-**Built with:**
-- OpenAI Agents SDK
-- Supabase (RAG backend)
-- Claude Code (for heavy lifting)
+## 📁 Repository Structure
+
+```
+insightpulse-platform/
+├── apps/                   # All frontends (Next.js, docs, admin, client portals)
+├── platform/               # Supabase, Odoo, pipelines, experiments
+├── agents/                 # Agent registry, skills, MCP configs, playbooks
+├── design-system/          # Tokens, themes, shared UI components
+├── docs/                   # Human docs + upstream mirrors + RAG knowledge
+├── automation/             # n8n, Deepnote, CI/CD, Mattermost, scripts
+├── infra/                  # Terraform, Docker, k8s, env templates
+├── .specify/specs/         # Spec Kit specs (spec.md, plan.md, tasks.md)
+├── CLAUDE.md               # AI copilot instructions
+├── PLANNING.md             # Phase-based roadmap
+├── TASKS.md                # Cross-cutting implementation checklist
+├── CHANGELOG.md            # Version history
+└── CODEBASE_GUIDE.md       # Comprehensive technical documentation
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm 10.11.1+
+- Docker (for local Supabase and Odoo)
+- Supabase CLI (optional, for local development)
+
+### Clone and Install
+
+```bash
+git clone https://github.com/jgtolentino/opex.git
+cd opex
+pnpm install
+```
+
+### Environment Setup
+
+1. Copy environment templates:
+   ```bash
+   cp infra/env-templates/.env.opex.example .env
+   cp infra/env-templates/.env.supabase.example platform/supabase/.env
+   ```
+
+2. Fill in actual values (never commit `.env` files)
+
+### Run Local Stack
+
+```bash
+# Start Supabase locally
+cd platform/supabase
+supabase start
+
+# Start Odoo (Docker)
+cd platform/odoo/docker
+docker-compose up -d
+
+# Start an app (e.g., OpEx Portal)
+cd apps/opex-portal
+pnpm dev
+```
+
+---
+
+## 📚 Key Components
+
+### Apps
+
+User-facing frontends:
+- **OpEx Portal** - Operational excellence UI (RAG-powered docs, PH tax, HR)
+- **Data Lab UI** - Analytics dashboards (Superset, Deepnote, Jenny AI BI Genie)
+- **Docs Site** - Public documentation (Docusaurus)
+- **Admin Console** - Internal admin tools
+
+**Status:** Planned (Phase 3)  
+**README:** [apps/README.md](apps/README.md)
+
+### Platform
+
+Backend systems and data infrastructure:
+- **Supabase** - PostgreSQL + pgvector + Edge Functions (RAG, analytics)
+- **Odoo CE/OCA** - ERP with custom modules (finance, HR, branding cleaner)
+- **Data Pipelines** - ETL scripts (extract, transform, load)
+- **Experiments** - RAG experiments, model registry
+
+**Status:** Active (Supabase, Odoo), Planned (Pipelines, Experiments)  
+**README:** [platform/README.md](platform/README.md)
+
+### Agents
+
+AI agent architecture:
+- **Registry** - `agents.yaml`, `skills.yaml` (6 agents, 11 skills)
+- **Skills** - BPM, CTO Mentor, Data Lab (Superset, Deepnote, ECharts)
+- **MCP** - Model Context Protocol integrations (Chrome DevTools, Supabase, Odoo, n8n)
+- **Playbooks** - End-to-end workflows (Design Import, Data Lab Health, Odoo Branding Guard)
+
+**Status:** Active (Skills), Planned (MCP, Playbooks)  
+**README:** [agents/README.md](agents/README.md)
+
+### Design System
+
+Unified visual language:
+- **Tokens** - Color, typography, spacing (Material 3-aligned)
+- **Themes** - MUI theme, ECharts theme
+- **Components** - KpiCard, TimeSeriesChart, RatingDistributionChart
+
+**Status:** Planned (Phase 2)  
+**README:** [design-system/README.md](design-system/README.md)
+
+### Docs
+
+Documentation and knowledge:
+- **InsightPulse Docs** - First-party guides (OpEx, Data Lab, n8n, Odoo, agents)
+- **Upstream Docs** - Mirrored docs (Odoo CE/OCA, git submodules)
+- **AI Knowledge** - RAG ingest scripts and manifests
+
+**Status:** Active (InsightPulse), Planned (Upstream, RAG ingest)  
+**README:** [docs/insightpulse/architecture/overview.md](docs/insightpulse/architecture/overview.md)
+
+### Automation
+
+Workflows and integrations:
+- **n8n** - Workflow automation (alerts, design import, docs sync)
+- **Deepnote** - Data jobs and notebooks
+- **CI/CD** - GitHub Actions (linting, deployment, validation)
+- **Mattermost** - Slash commands, webhooks
+
+**Status:** Partially Active (n8n), Planned (Deepnote, CI/CD, Mattermost)  
+**README:** [automation/README.md](automation/README.md)
+
+### Infra
+
+Infrastructure as code:
+- **Docker** - Docker Compose for local dev
+- **Terraform** - Cloud infrastructure (optional)
+- **Env Templates** - `.env` examples for all services
+
+**Status:** Planned (Phase 4)  
+**README:** [infra/README.md](infra/README.md)
+
+---
+
+## 📖 Documentation
+
+- **CLAUDE.md** - AI copilot instructions for working in this repo
+- **CODEBASE_GUIDE.md** - Comprehensive technical guide (architecture, stack, patterns)
+- **PLANNING.md** - Roadmap with 6 phases (M0-M6)
+- **TASKS.md** - Cross-repo task checklist
+- **CHANGELOG.md** - Version history and release notes
+- **Specs** - `.specify/specs/**` - Spec Kit feature specs
+
+---
+
+## 🗺️ Roadmap
+
+Current phase: **Phase 0 Complete, Phase 1 In Progress**
+
+- **M0 (Complete):** Monorepo structure, coordination files
+- **M1 (In Progress):** Migrate existing code to new structure
+- **M2 (Planned):** Design system tokens + themes
+- **M3 (Planned):** Applications (OpEx Portal, Data Lab UI, Docs Site)
+- **M4 (Planned):** Agents + MCP flows
+- **M5 (Planned):** Automation + health monitoring
+- **M6 (Planned):** Production-grade hardening, observability, docs
+
+See [PLANNING.md](PLANNING.md) for detailed phases and milestones.
+
+---
+
+## 🧩 Tech Stack
+
+**Frontend:**
+- Next.js 15, React 19, TypeScript 5.9
+- Material UI (MUI), Apache ECharts
+- Docusaurus 3.x (docs site)
+
+**Backend:**
+- Supabase (PostgreSQL + pgvector, Deno Edge Functions)
+- Odoo CE v17 (AGPL-3, OCA-compliant)
+- Python (ETL scripts, data jobs)
+
+**AI/ML:**
+- OpenAI API (GPT-4, Assistants, Embeddings)
+- RAG (Retrieval-Augmented Generation)
+- Multi-agent orchestration (MCP)
+
+**Data & Analytics:**
+- Apache Superset (self-hosted BI)
+- Deepnote (collaborative notebooks)
+- Jenny (AI BI Genie)
+
+**Automation:**
+- n8n (workflow automation)
+- GitHub Actions (CI/CD)
+- Mattermost (collaboration, alerts)
+
+---
+
+## 🤝 Contributing
+
+This is a private monorepo for InsightPulse Platform. For contributors:
+
+1. **Follow CLAUDE.md** - AI copilot instructions and patterns
+2. **Spec-Driven** - Add/update specs in `.specify/specs/**` for major features
+3. **Update TASKS.md** - Check off tasks as you complete them
+4. **Update CHANGELOG.md** - Document changes under `Unreleased` or version sections
+5. **Respect Structure** - Apps in `apps/`, platform in `platform/`, etc.
+6. **No Secrets** - Use `.env` files, never commit secrets
+
+### Development Workflow
+
+1. Create feature branch: `git checkout -b feature/my-feature`
+2. Make changes following existing patterns
+3. Update specs, tasks, changelog
+4. Run linters and tests (when available)
+5. Push and create PR
+6. Deploy to staging (auto on PR)
+7. Merge to main after review
+
+---
+
+## 📄 License
+
+- **Apps, Design System, Docs, Automation:** MIT
+- **Odoo Modules (`platform/odoo/addons/ipai_*`):** AGPL-3 (OCA-compliant)
+
+See individual LICENSE files where applicable.
+
+---
+
+## 🔗 Links
+
+- **GitHub:** https://github.com/jgtolentino/opex
+- **Documentation:** (Planned: docs.insightpulseai.net)
+- **Support:** (Mattermost/Slack TBD)
+
+---
+
+## 📞 Contact
+
+**Maintainer:** Jake Tolentino  
+**Organization:** InsightPulseAI  
+**Project:** InsightPulse Platform
+
+For questions or support, see the internal wiki or contact the team lead.
+
+---
+
+**Built with ❤️ by the InsightPulse team**

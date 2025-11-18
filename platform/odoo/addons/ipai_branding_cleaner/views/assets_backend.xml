@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template
+        id="ipai_branding_cleaner_assets_backend"
+        inherit_id="web.assets_backend"
+        name="InsightPulse Branding Cleaner Assets"
+    >
+        <xpath expr="." position="inside">
+            <script
+                type="text/javascript"
+                src="/ipai_branding_cleaner/static/src/js/branding_cleaner.js"
+            />
+            <link
+                rel="stylesheet"
+                type="text/scss"
+                href="/ipai_branding_cleaner/static/src/scss/branding_cleaner.scss"
+            />
+        </xpath>
+    </template>
+</odoo>
