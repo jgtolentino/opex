@@ -1,0 +1,4 @@
+[submodule "data-lab"]
+	path = data-lab
+	url = https://github.com/jgtolentino/deep-data-workbench.git
+	branch = main

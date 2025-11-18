@@ -72,6 +72,60 @@ The Data Lab brings together executive dashboards, ad-hoc analytics, and automat
 | **ECharts** | Standardized visualizations across all surfaces | System-wide (rendered everywhere) |
 | **Supabase** | Unified data warehouse, single source of truth | Backend for all components |
 
+### Database Architecture (Single Shared Database)
+
+**Critical:** All Data Lab components use the **same Supabase PostgreSQL database**. There is NO separate database for Deepnote, Superset, or Jenny.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│         Supabase PostgreSQL (Single Database)            │
+│                                                          │
+│  Production Schemas (READ-ONLY except via migrations):  │
+│    • scout.*    - retail/sales metrics                  │
+│    • opex.*     - operations and month-end metrics      │
+│    • te_tax.*   - tax and expense tracking              │
+│    • ces.*      - creative effectiveness metrics        │
+│    • gold.*     - summary tables (written by Deepnote)  │
+│                                                          │
+│  Development Schemas (READ/WRITE for Deepnote):         │
+│    • dev_lab_*  - experimental schemas for prototyping  │
+│    • staging.*  - testing before production             │
+└──────────────────────────────────────────────────────────┘
+              ▲          ▲          ▲          ▲
+              │          │          │          │
+      ┌───────┘          │          │          └─────────┐
+      │                  │          │                    │
+┌─────▼──────┐   ┌───────▼─────┐  ┌▼────────┐  ┌────────▼────────┐
+│ Deepnote   │   │  Superset   │  │ Jenny   │  │ OpEx Admin      │
+│ (data-lab/)│   │  (BI)       │  │ (AI BI) │  │ Shell (AntD)    │
+└────────────┘   └─────────────┘  └─────────┘  └─────────────────┘
+READ/WRITE        READ-ONLY        READ-ONLY      READ-ONLY
+(dev_lab_*)       (curated)        (curated)      (curated)
+```
+
+**Access Patterns:**
+- **Deepnote**: Read/write to `dev_lab_*` for experiments; read-only to production schemas; writes to `gold.*` via scheduled jobs
+- **Superset**: Read-only to curated schemas for BI dashboards
+- **Jenny**: Read-only to curated schemas for conversational analytics
+- **OpEx Admin Shell**: Read-only to curated schemas for operational UI
+
+**Database Roles:**
+```sql
+-- Deepnote (development)
+deepnote_dev → GRANT ALL ON dev_lab_*, CREATE on gold.*
+
+-- Deepnote (production queries)
+deepnote_readonly → GRANT SELECT ON scout, opex, te_tax, ces, gold
+
+-- Superset
+superset_readonly → GRANT SELECT ON scout, opex, te_tax, ces, gold
+
+-- Jenny
+jenny_readonly → GRANT SELECT ON scout, opex, te_tax, ces, gold
+```
+
+**Setup Instructions:** See `DATA_LAB_SETUP.md` for complete database configuration guide.
+
 ---
 
 ## Component Breakdown
@@ -114,6 +168,12 @@ The Data Lab brings together executive dashboards, ad-hoc analytics, and automat
 
 **Skills that support Deepnote:**
 - `insightpulse-deepnote-data-lab` - Workspace architecture and job design
+
+**Repository:**
+- Located at `data-lab/` (git submodule)
+- Source: https://github.com/jgtolentino/deep-data-workbench
+- Initialize with: `git submodule update --init data-lab`
+- See `DATA_LAB_SETUP.md` for complete setup instructions
 
 ### 3. Jenny (AI BI Genie)
 

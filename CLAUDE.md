@@ -133,7 +133,11 @@ The platform serves a Finance Shared Services Center (SSC) managing 8 agencies w
 ├── requirements.txt          # Python dependencies
 ├── README.md                 # Project overview
 ├── .env.example              # Environment variables template
-└── .gitignore               # Git ignore rules
+├── .gitignore               # Git ignore rules
+├── .gitmodules              # Git submodules configuration
+└── data-lab/                # Deepnote workspace (git submodule)
+                             # Source: github.com/jgtolentino/deep-data-workbench
+                             # Initialize: git submodule update --init data-lab
 ```
 
 ### 2.1 `/pages` Directory (Next.js Routes)
@@ -1406,6 +1410,15 @@ pnpm exec ts-node scripts/test-opex-rag.ts
   - Technical setup and deployment
   - User personas and workflows
   - Integration patterns
+- `DATA_LAB_SETUP.md` - **Deepnote + Supabase connection guide**
+  - Database architecture (single shared Supabase DB)
+  - Connection setup for Deepnote
+  - Security and access patterns
+  - Scheduled jobs and gold table workflows
+  - Troubleshooting
+- `data-lab/` - Deepnote workspace repository (submodule)
+  - Initialize: `git submodule update --init data-lab`
+  - Contains notebook templates, EDA, and job definitions
 
 **Development Frameworks**:
 - `skills/README.md` - Agent skills framework
@@ -1428,6 +1441,7 @@ pnpm exec ts-node scripts/test-opex-rag.ts
 - **Understanding skills**: See `skills/README.md` and `.claude/AGENTS.md`
 - **n8n workflows**: See `workflows/n8n/SETUP.md`
 - **Implementing Data Lab**: See `DATA_LAB_INTEGRATION_GUIDE.md` (Superset, Deepnote, Jenny, ECharts)
+- **Setting up Deepnote**: See `DATA_LAB_SETUP.md` (database config, connections, job scheduling)
 - **Working with Jenny**: See `components/jenny/JennyPanel.tsx` and Data Lab guide
 - **Data Lab skills**: See `.claude/skills/insightpulse-*` (6 specialized skills)
 
