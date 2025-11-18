@@ -194,6 +194,49 @@ Unify agents, design system, docs, and automations into a single, production-gra
 
 ---
 
+### Phase 7 – WHT Platform (White-Label Headless Template)
+
+**Goal:** Automated SaaS cloning engine for product parity + brand alignment.
+
+**Scope:**
+- `platform/wht-engine/`:
+
+  - Ingestion & analysis layer (web crawlers, HTML/DOM analyzer, text analyzer)
+  - Blueprint & template engine (stack_blueprint.yaml generation)
+  - Generators (Supabase, Odoo, Next.js, n8n, docs)
+  - Design mapper (visual alignment + token extraction)
+  - WHT API (FastAPI/Express) for orchestration
+
+- WHT meta schema in Supabase:
+
+  - `wht.projects` – Project registry
+  - `wht.blueprints` – Blueprint versions
+  - `wht.runs` – Generation run logs
+  - `wht.design_tokens` – Design token sets
+
+- Template library:
+
+  - Cheqroom-class equipment/asset management
+  - Calendly-class booking/scheduling
+  - CRM/light ERP
+  - (Additional verticals as needed)
+
+- CLI & Console UI:
+
+  - `wht analyze` – Analyze target SaaS and create blueprint
+  - `wht generate` – Generate full stack from blueprint
+  - WHT Console UI for project management and run monitoring
+
+**Depends on:** Phases 0-2 (foundation, design system, platform core).
+
+**Deliverables:**
+- End-to-end SaaS cloning capability
+- First Cheqroom-class clone generated and deployed
+- 3+ reference templates available
+- < 60 minute generation time
+
+---
+
 ## 3. Milestones Snapshot
 
 - **M0:** Monorepo structure in place, baseline tooling wired.
@@ -203,6 +246,7 @@ Unify agents, design system, docs, and automations into a single, production-gra
 - **M4:** Agents + MCP flows wired and documented.
 - **M5:** Automation + health monitoring in place.
 - **M6:** Docs and runbooks reflect reality; system is auditable and boring.
+- **M7:** WHT Platform operational; SaaS cloning capability proven with 3+ templates.
 
 ---
 
