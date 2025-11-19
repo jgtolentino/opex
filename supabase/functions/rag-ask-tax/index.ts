@@ -3,6 +3,8 @@
 // Contract matches n8n workflow: POST /rag/ask-tax with { question, context }.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { handleCorsPreflightRequest, jsonResponseWithCors, errorResponseWithCors } from "../_shared/cors.ts";
+import { rateLimitMiddleware, createRateLimitErrorResponse } from "../_shared/ratelimit.ts";
 
 type AskTaxRequest = {
   question: string;
@@ -34,30 +36,35 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('origin');
+
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return handleCorsPreflightRequest(req);
+  }
+
+  // Check rate limit
+  const rateLimitResult = rateLimitMiddleware(req);
+  if (!rateLimitResult.allowed) {
+    console.warn('Rate limit exceeded:', rateLimitResult);
+    return createRateLimitErrorResponse(rateLimitResult, origin);
+  }
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponseWithCors("Method not allowed", origin, 405);
   }
 
   let body: AskTaxRequest;
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponseWithCors("Invalid JSON body", origin, 400);
   }
 
   const question = (body.question || "").trim();
 
   if (!question) {
-    return new Response(
-      JSON.stringify({ error: "Missing 'question' in request body" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return errorResponseWithCors("Missing 'question' in request body", origin, 400);
   }
 
   // --- 1) Log the query (optional but recommended) ---
@@ -101,8 +108,5 @@ Deno.serve(async (req) => {
     risk_level: "high", // treat stub as high-risk
   };
 
-  return new Response(JSON.stringify(response), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  return jsonResponseWithCors(response, origin, 200);
 });

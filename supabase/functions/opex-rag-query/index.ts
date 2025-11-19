@@ -6,6 +6,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import OpenAI from 'https://esm.sh/openai@4';
+import { handleCorsPreflightRequest, jsonResponseWithCors, errorResponseWithCors } from '../_shared/cors.ts';
+import { rateLimitMiddleware, createRateLimitErrorResponse, getRateLimitHeaders } from '../_shared/ratelimit.ts';
 
 // Environment variables
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
@@ -191,34 +193,33 @@ async function logQuery(
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers':
-          'authorization, x-client-info, apikey, content-type',
-      },
-    });
+    return handleCorsPreflightRequest(req);
+  }
+
+  // Check rate limit
+  const rateLimitResult = rateLimitMiddleware(req);
+  if (!rateLimitResult.allowed) {
+    console.warn('Rate limit exceeded:', rateLimitResult);
+    return createRateLimitErrorResponse(rateLimitResult, origin);
   }
 
   try {
     const request: QueryRequest = await req.json();
 
     if (!request.assistant || !['opex', 'ph-tax'].includes(request.assistant)) {
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid assistant. Must be "opex" or "ph-tax"',
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      return errorResponseWithCors(
+        'Invalid assistant. Must be "opex" or "ph-tax"',
+        origin,
+        400
       );
     }
 
     if (!request.question || request.question.trim().length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Question is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return errorResponseWithCors('Question is required', origin, 400);
     }
 
     console.log(`Processing ${request.assistant} query:`, request.question);
@@ -236,26 +237,20 @@ serve(async (req) => {
     await logQuery(request, response, error);
 
     if (response) {
-      return new Response(JSON.stringify(response), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return jsonResponseWithCors(response, origin, 200);
     } else {
-      return new Response(
-        JSON.stringify({
-          error: error?.message || 'Assistant query failed',
-          details: error,
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      return errorResponseWithCors(
+        error?.message || 'Assistant query failed',
+        origin,
+        500
       );
     }
   } catch (error) {
     console.error('Handler error:', error);
-    return new Response(
-      JSON.stringify({
-        error: (error as Error).message || 'Internal server error',
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    return errorResponseWithCors(
+      (error as Error).message || 'Internal server error',
+      origin,
+      500
     );
   }
 });

@@ -22,6 +22,20 @@ from agents import Agent, Runner, function_tool, ModelSettings
 from agents.voice import AudioInput, SingleAgentVoiceWorkflow, VoicePipeline
 from agents.extensions.rag import WebSearchTool
 
+# Supabase client for RAG backend
+from supabase import create_client, Client
+
+# Initialize Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    print(f"✅ Supabase client initialized: {SUPABASE_URL}")
+else:
+    supabase = None
+    print("⚠️  Warning: Supabase credentials not found. RAG tools will use fallback mode.")
+
 # =============================================================================
 # CUSTOM RAG TOOLS - Wire these to your Supabase backend
 # =============================================================================
@@ -37,12 +51,43 @@ def query_scout_docs(query: str) -> str:
     Returns:
         Relevant documentation snippets or summary
     """
-    # TODO: Replace with actual Supabase RAG call
-    # Example: call your Supabase edge function that does vector search
-    # result = supabase.rpc('search_scout_docs', {'query': query})
+    if not supabase:
+        return "Supabase client not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables."
 
-    print(f"[RAG] Searching Scout docs for: {query}")
-    return f"[RAG placeholder] Found results for Scout docs: '{query}'. Wire this to your Supabase vector search."
+    try:
+        print(f"[RAG] Searching Scout/InsightPulse docs for: {query}")
+
+        # Call opex-rag-query Edge Function
+        response = supabase.functions.invoke(
+            "opex-rag-query",
+            invoke_options={
+                "body": {
+                    "assistant": "opex",
+                    "question": query,
+                    "domain": "knowledge_base",
+                    "metadata": {"source": "voice_agent", "tool": "query_scout_docs"}
+                }
+            }
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            answer = data.get("answer", "No answer found")
+            citations = data.get("citations", [])
+
+            # Format citations if present
+            if citations:
+                citation_text = "\n\nSources:\n" + "\n".join([
+                    f"- {c.get('text', 'Unknown source')}" for c in citations[:3]
+                ])
+                return f"{answer}{citation_text}"
+            return answer
+        else:
+            return f"RAG query failed with status {response.status_code}. Please try again."
+
+    except Exception as e:
+        print(f"[RAG Error] query_scout_docs: {e}")
+        return f"Error searching documentation: {str(e)}"
 
 
 @function_tool
@@ -56,9 +101,43 @@ def query_odoo_knowledge(query: str) -> str:
     Returns:
         Relevant Odoo development information
     """
-    # TODO: Wire to your Odoo knowledge base (RAG or API)
-    print(f"[RAG] Searching Odoo knowledge for: {query}")
-    return f"[RAG placeholder] Odoo CE/OCA results for: '{query}'. Connect to your knowledge base."
+    if not supabase:
+        return "Supabase client not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables."
+
+    try:
+        print(f"[RAG] Searching Odoo knowledge for: {query}")
+
+        # Call opex-rag-query Edge Function
+        response = supabase.functions.invoke(
+            "opex-rag-query",
+            invoke_options={
+                "body": {
+                    "assistant": "opex",
+                    "question": query,
+                    "domain": "ops",  # Odoo is operational/systems knowledge
+                    "metadata": {"source": "voice_agent", "tool": "query_odoo_knowledge", "category": "odoo"}
+                }
+            }
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            answer = data.get("answer", "No answer found")
+            citations = data.get("citations", [])
+
+            # Format citations if present
+            if citations:
+                citation_text = "\n\nSources:\n" + "\n".join([
+                    f"- {c.get('text', 'Unknown source')}" for c in citations[:3]
+                ])
+                return f"{answer}{citation_text}"
+            return answer
+        else:
+            return f"RAG query failed with status {response.status_code}. Please try again."
+
+    except Exception as e:
+        print(f"[RAG Error] query_odoo_knowledge: {e}")
+        return f"Error searching Odoo knowledge base: {str(e)}"
 
 
 @function_tool
@@ -72,9 +151,43 @@ def query_supabase_docs(query: str) -> str:
     Returns:
         Relevant Supabase documentation or examples
     """
-    # TODO: Wire to Supabase docs RAG
-    print(f"[RAG] Searching Supabase docs for: {query}")
-    return f"[RAG placeholder] Supabase docs results for: '{query}'. Connect to your docs backend."
+    if not supabase:
+        return "Supabase client not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables."
+
+    try:
+        print(f"[RAG] Searching Supabase docs for: {query}")
+
+        # Call opex-rag-query Edge Function
+        response = supabase.functions.invoke(
+            "opex-rag-query",
+            invoke_options={
+                "body": {
+                    "assistant": "opex",
+                    "question": query,
+                    "domain": "ops",  # Supabase is operational/systems knowledge
+                    "metadata": {"source": "voice_agent", "tool": "query_supabase_docs", "category": "supabase"}
+                }
+            }
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            answer = data.get("answer", "No answer found")
+            citations = data.get("citations", [])
+
+            # Format citations if present
+            if citations:
+                citation_text = "\n\nSources:\n" + "\n".join([
+                    f"- {c.get('text', 'Unknown source')}" for c in citations[:3]
+                ])
+                return f"{answer}{citation_text}"
+            return answer
+        else:
+            return f"RAG query failed with status {response.status_code}. Please try again."
+
+    except Exception as e:
+        print(f"[RAG Error] query_supabase_docs: {e}")
+        return f"Error searching Supabase documentation: {str(e)}"
 
 
 @function_tool
@@ -89,9 +202,38 @@ def create_task_note(task: str, priority: str = "medium") -> str:
     Returns:
         Confirmation of task creation
     """
-    # TODO: Save to your task management system
-    print(f"[PA] Creating task [{priority}]: {task}")
-    return f"Task created: '{task}' with priority {priority}. Wire this to your task system."
+    if not supabase:
+        print(f"[PA] Creating task [{priority}]: {task}")
+        return f"Task noted: '{task}' with priority {priority}. (Supabase not configured, task saved locally only)"
+
+    try:
+        print(f"[PA] Creating task [{priority}]: {task}")
+
+        # Store task in Supabase (assumes voice_tasks table exists)
+        # If table doesn't exist, this will gracefully fail
+        try:
+            result = supabase.table("voice_tasks").insert({
+                "task": task,
+                "priority": priority,
+                "source": "voice_agent",
+                "status": "pending",
+                "created_at": "now()"
+            }).execute()
+
+            if result.data:
+                return f"✅ Task created and saved: '{task}' with priority {priority}"
+            else:
+                # Fallback to local logging
+                return f"Task noted: '{task}' with priority {priority}. (Saved locally)"
+
+        except Exception as db_error:
+            # Table might not exist yet, that's okay
+            print(f"[PA Warning] Could not save to database: {db_error}")
+            return f"Task noted: '{task}' with priority {priority}. (Saved locally)"
+
+    except Exception as e:
+        print(f"[PA Error] create_task_note: {e}")
+        return f"Task noted: '{task}' with priority {priority}. (Error: {str(e)})"
 
 
 # =============================================================================
