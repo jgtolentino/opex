@@ -1,0 +1,74 @@
+/**
+ * InsightPulse Branding Cleaner - Styles
+ *
+ * Belt-and-suspenders CSS to hide any remaining Odoo branding
+ * that JavaScript might miss.
+ */
+
+// Hide any remaining odoo.com links
+a[href*="odoo.com"] {
+  display: none !important;
+}
+
+// Hide Odoo logo elements
+img[src*="logo"],
+img[alt*="Odoo"],
+.o_logo {
+  // Don't hide all logos, just ensure they can be overridden
+}
+
+// Hide common "Powered by Odoo" locations
+.o_main_content,
+.o_content,
+.o_website_footer,
+.o_footer {
+
+  // Hide odoo.com links in footer/follow sections
+  .o_follow_us,
+  .o_footer_copyright {
+    a[href*="odoo.com"] {
+      display: none !important;
+    }
+
+    // Hide text nodes containing "odoo"
+    &:has(a[href*="odoo.com"]) {
+      display: none !important;
+    }
+  }
+}
+
+// Hide IAP/Enterprise upsell banners
+.o_onboarding_container,
+.o_enterprise_banner,
+[data-name="iap_banner"] {
+  display: none !important;
+}
+
+// Hide "Buy Credits" and similar IAP buttons
+button[title*="Buy"],
+a[href*="iap.odoo.com"] {
+  display: none !important;
+}
+
+// Hide Enterprise upgrade prompts
+.o_upgrade {
+  display: none !important;
+}
+
+// Override any "Powered by Odoo" footer text
+.o_footer_copyright::after {
+  content: "" !important;
+}
+
+// Hide external links to odoo.com in help/onboarding
+.o_nocontent_help a[href*="odoo.com"] {
+  display: none !important;
+}
+
+// Debug mode: Uncomment to highlight remaining Odoo references
+/*
+a[href*="odoo.com"],
+*[class*="odoo"] {
+  outline: 2px solid red !important;
+}
+*/

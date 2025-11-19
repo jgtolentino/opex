@@ -1,0 +1,122 @@
+# Agent Registry
+# This file defines all agents in the InsightPulse Platform
+# Version: 1.0.0
+
+agents:
+  - id: opex-assistant
+    name: OpEx Assistant
+    description: Primary AI assistant for operational excellence queries, RAG-powered documentation access
+    version: 1.0.0
+    status: active
+    primary_tools:
+      - supabase-rag
+      - openai-assistants
+    skills:
+      - opex-docs-search
+      - ph-tax-compliance
+    mcp_servers:
+      - supabase-tools
+    routing_tags:
+      - opex
+      - docs
+      - rag
+      - operations
+
+  - id: data-lab-assistant
+    name: InsightPulse Data Lab Assistant
+    description: Assists with data analytics, Superset dashboards, Deepnote notebooks, and Jenny (AI BI Genie)
+    version: 1.0.0
+    status: active
+    primary_tools:
+      - superset-api
+      - deepnote-integration
+      - supabase-analytics
+    skills:
+      - insightpulse-superset-platform-admin
+      - insightpulse-superset-api-ops
+      - insightpulse-superset-embedded-analytics
+      - insightpulse-superset-user-enablement
+      - insightpulse-deepnote-data-lab
+      - insightpulse-echarts-viz-system
+    mcp_servers:
+      - supabase-tools
+      - n8n-orchestrator
+    routing_tags:
+      - data-lab
+      - analytics
+      - superset
+      - deepnote
+      - bi
+
+  - id: odoo-architect
+    name: Odoo CE/OCA Architect
+    description: Specialized in Odoo CE/OCA module development, AGPL compliance, and ERP customization
+    version: 1.0.0
+    status: active
+    primary_tools:
+      - odoo-backend
+      - python-development
+    skills:
+      - odoo-module-development
+      - oca-compliance
+    mcp_servers:
+      - odoo-backend
+    routing_tags:
+      - odoo
+      - erp
+      - oca
+      - agpl
+
+  - id: design-import-agent
+    name: Design Import Pipeline Agent
+    description: Manages the Figma → Code design import pipeline using n8n and Chrome DevTools MCP
+    version: 1.0.0
+    status: active
+    primary_tools:
+      - chrome-devtools
+      - n8n-workflows
+    skills:
+      - design-token-extraction
+      - component-generation
+    mcp_servers:
+      - chrome-devtools
+      - n8n-orchestrator
+    routing_tags:
+      - design
+      - figma
+      - pipeline
+      - automation
+
+  - id: bpm-suite
+    name: BPM Agent Suite
+    description: Collection of business process management agents for specialized roles
+    version: 1.0.0
+    status: active
+    skills:
+      - bpm_copywriter
+      - bpm_knowledge_agent
+      - bpm_learning_designer
+      - bpm_transformation_partner
+    routing_tags:
+      - bpm
+      - business-process
+      - training
+      - transformation
+
+  - id: cto-mentor
+    name: CTO Mentor
+    description: Provides CTO-level guidance for AI-first products, platforms, and org design
+    version: 1.0.0
+    status: active
+    skills:
+      - cto_mentor
+    routing_tags:
+      - strategy
+      - architecture
+      - leadership
+      - platform
+
+metadata:
+  last_updated: "2025-11-18"
+  schema_version: "1.0"
+  total_agents: 6
