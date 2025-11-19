@@ -25,8 +25,14 @@
 
         Technical Details:
         -----------------
-        * Pure JavaScript + SCSS implementation (no QWeb template overrides needed)
-        * Runs on every backend page load
+        * Multi-layer isolation approach:
+          - System parameters (domain binding & URL freezing)
+          - QWeb template overrides (view-level cleaning)
+          - JavaScript DOM manipulation (dynamic content)
+          - SCSS hiding rules (belt-and-suspenders)
+        * Disables phone-home scheduled actions
+        * Sets web.base.url and freezes it to your domain
+        * Removes all IAP/Enterprise upsell elements
         * No impact on Odoo core functionality
         * Compatible with Odoo 16, 17, and 18 CE
     """,
@@ -35,8 +41,19 @@
     "author": "InsightPulseAI",
     "website": "https://insightpulseai.net",
     "license": "AGPL-3",
-    "depends": ["web"],
+    "depends": ["web", "base_setup"],
     "data": [
+        # System parameters (CRITICAL for domain binding)
+        "data/system_parameters.xml",
+
+        # Disable phone-home scheduled actions
+        "data/scheduled_actions.xml",
+
+        # View overrides (QWeb template level)
+        "views/webclient_cleanup.xml",
+        "views/settings_cleanup.xml",
+
+        # Assets (JavaScript + SCSS)
         "views/assets_backend.xml",
     ],
     "assets": {},

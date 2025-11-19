@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="1">
+        <!--
+            System Parameters for Complete odoo.com Isolation
+
+            These parameters are the CRITICAL foundation for domain binding.
+            They prevent Odoo from auto-detecting and rewriting URLs back to odoo.com.
+        -->
+
+        <!-- Lock base URL to your domain -->
+        <record id="system_param_base_url" model="ir.config_parameter">
+            <field name="key">web.base.url</field>
+            <field name="value">https://erp.yourdomain.com</field>
+        </record>
+
+        <!-- Freeze the base URL (prevent auto-detection) -->
+        <record id="system_param_base_url_freeze" model="ir.config_parameter">
+            <field name="key">web.base.url.freeze</field>
+            <field name="value">True</field>
+        </record>
+
+        <!-- Disable external apps link -->
+        <record id="system_param_apps_url" model="ir.config_parameter">
+            <field name="key">apps.base_url</field>
+            <field name="value"></field>
+        </record>
+
+        <!-- Point documentation to your own docs -->
+        <record id="system_param_doc_url" model="ir.config_parameter">
+            <field name="key">documentation.base_url</field>
+            <field name="value">https://docs.yourdomain.com/odoo</field>
+        </record>
+
+        <!-- Disable IAP endpoint -->
+        <record id="system_param_iap_endpoint" model="ir.config_parameter">
+            <field name="key">iap.endpoint</field>
+            <field name="value"></field>
+        </record>
+
+        <!-- Replace Odoo.com links in onboarding/help -->
+        <record id="system_param_help_url" model="ir.config_parameter">
+            <field name="key">help.base_url</field>
+            <field name="value">https://support.yourdomain.com</field>
+        </record>
+
+        <!-- Disable version checking -->
+        <record id="system_param_disable_version_check" model="ir.config_parameter">
+            <field name="key">base.disable_version_check</field>
+            <field name="value">True</field>
+        </record>
+
+        <!-- Disable publisher warranty (odoo.com check-in) -->
+        <record id="system_param_disable_publisher_warranty" model="ir.config_parameter">
+            <field name="key">database.is_neutralized</field>
+            <field name="value">True</field>
+        </record>
+
+    </data>
+</odoo>

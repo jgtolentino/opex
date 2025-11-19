@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--
+        Settings View Overrides
+
+        Remove/replace odoo.com links in the Settings interface:
+        - Remove "View My Services" buttons
+        - Remove mobile app store links
+        - Remove "Buy Credits" / IAP buttons
+        - Replace help links with your own
+    -->
+
+    <!-- Override General Settings form -->
+    <record id="res_config_settings_view_form_clean" model="ir.ui.view">
+        <field name="name">InsightPulse: Clean Settings Form</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Remove "View My Services" button (IAP portal link) -->
+            <xpath expr="//button[@name='open_website_url']" position="replace"/>
+
+            <!-- Remove "Odoo Mobile App" section if it exists -->
+            <xpath expr="//div[contains(@class, 'o_setting_box')]//a[contains(@href, 'apps.apple.com')]" position="replace"/>
+            <xpath expr="//div[contains(@class, 'o_setting_box')]//a[contains(@href, 'play.google.com')]" position="replace"/>
+
+            <!-- Replace any odoo.com help links -->
+            <xpath expr="//a[contains(@href, 'odoo.com/documentation')]" position="attributes">
+                <attribute name="href">https://docs.yourdomain.com/odoo</attribute>
+            </xpath>
+
+            <!-- Remove "Buy Credits" / IAP buttons if they exist -->
+            <xpath expr="//button[contains(text(), 'Buy Credits')]" position="replace"/>
+            <xpath expr="//a[contains(@href, 'iap.odoo.com')]" position="replace"/>
+
+        </field>
+    </record>
+
+    <!-- Clean up the "About" page -->
+    <record id="view_server_action_about_clean" model="ir.ui.view">
+        <field name="name">InsightPulse: Clean About Page</field>
+        <field name="model">ir.module.module</field>
+        <field name="inherit_id" ref="base.module_form" priority="99"/>
+        <field name="arch" type="xml">
+            <!-- Remove odoo.com links from module descriptions -->
+            <xpath expr="//a[contains(@href, 'odoo.com')]" position="replace">
+                <a href="https://insightpulseai.net" target="_blank">InsightPulseAI</a>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

@@ -64,15 +64,28 @@ Use `[ ]` → `[x]` as work is completed.
 
 ## D. Platform – Odoo CE / OCA
 
-- [ ] D1 – Place custom Odoo modules under `platform/odoo/addons/ipai_*`.
-- [ ] D2 – Ensure manifests are AGPL-3 and OCA-style:
-  - [ ] `author`, `website`, `license`, `installable`, `application`, `auto_install`
-- [ ] D3 – Add OCA linting:
+- [x] D1 – Place custom Odoo modules under `platform/odoo/addons/ipai_*`.
+- [x] D2 – Ensure manifests are AGPL-3 and OCA-style:
+  - [x] `author`, `website`, `license`, `installable`, `application`, `auto_install`
+- [x] D3 – Enhanced `ipai_branding_cleaner` module:
+  - [x] System parameters for domain binding (web.base.url, web.base.url.freeze)
+  - [x] QWeb template overrides for webclient and settings cleanup
+  - [x] JavaScript/SCSS for dynamic branding removal
+  - [x] Scheduled action disabling (IAP, update notifications, publisher warranty)
+- [x] D4 – Docker + OCB 18.0 setup:
+  - [x] `docker-compose.yml` with OCB (OCA Community Backports)
+  - [x] `odoo.conf` production-ready configuration
+  - [x] `.env.template` with security best practices
+- [x] D5 – Helper scripts for deployment:
+  - [x] `setup-oca-repos.sh` – Clone OCA repositories
+  - [x] `disable-iap.sh` – Remove IAP modules and accounts
+  - [x] `verify-isolation.sh` – Automated isolation verification
+- [x] D6 – Comprehensive documentation:
+  - [x] `DEPLOYMENT.md` – Full deployment guide (3-layer approach)
+  - [x] `QUICK_START.md` – 15-minute setup guide
+- [ ] D7 – Add OCA linting:
   - [ ] `pylint-odoo` configuration + basic CI step
-- [ ] D4 – Create `platform/odoo/docs/runbook.md`:
-  - [ ] Dev environment setup
-  - [ ] Upgrade flow
-  - [ ] Common admin operations
+- [ ] D8 – Add nginx/Caddy configuration examples to infra/
 
 ---
 

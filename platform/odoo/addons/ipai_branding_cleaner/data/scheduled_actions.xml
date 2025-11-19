@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="1">
+        <!--
+            Disable Odoo's Built-in Scheduled Actions That Phone Home
+
+            These cron jobs check for updates, send telemetry, and connect to odoo.com.
+            We disable them to ensure complete isolation.
+        -->
+
+        <!-- Disable Base: Update Notification -->
+        <record id="base.ir_cron_module_update_notification" model="ir.cron">
+            <field name="active" eval="False"/>
+        </record>
+
+        <!-- Disable IAP: Account Token Check (if exists) -->
+        <!-- This may not exist in CE, but we try to disable it anyway -->
+        <function model="ir.cron" name="search">
+            <value eval="[('name', 'ilike', 'iap')]"/>
+            <function model="ir.cron" name="write">
+                <value eval="{'active': False}"/>
+            </function>
+        </function>
+
+        <!-- Disable Publisher Warranty Check -->
+        <function model="ir.cron" name="search">
+            <value eval="[('name', 'ilike', 'publisher')]"/>
+            <function model="ir.cron" name="write">
+                <value eval="{'active': False}"/>
+            </function>
+        </function>
+
+        <!-- Disable any "Update" or "Notification" cron jobs -->
+        <function model="ir.cron" name="search">
+            <value eval="[('name', 'ilike', 'update notification')]"/>
+            <function model="ir.cron" name="write">
+                <value eval="{'active': False}"/>
+            </function>
+        </function>
+
+    </data>
+</odoo>

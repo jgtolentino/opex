@@ -1,0 +1,116 @@
+# Odoo Community Edition + OCA 18.0 - Docker Compose
+#
+# This setup provides:
+# - OCB (OCA Community Backports) 18.0 as the base image
+# - PostgreSQL database
+# - Custom addons support (ipai_branding_cleaner, etc.)
+# - OCA modules support
+# - Complete isolation from odoo.com services
+#
+# Usage:
+#   docker-compose up -d
+#   docker-compose logs -f odoo
+#   docker-compose down
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: ipai_odoo_db
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=${DB_USER:-odoo}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-odoo}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data/pgdata
+    networks:
+      - odoo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-odoo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  odoo:
+    # Using OCA's OCB (Odoo Community Backports) fork
+    # This is Community Edition with OCA's improvements and backports
+    image: ghcr.io/oca/oca-ci/py3.10-odoo18.0:latest
+    container_name: ipai_odoo
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${ODOO_PORT:-8069}:8069"
+      - "${ODOO_LONGPOLLING_PORT:-8072}:8072"
+    environment:
+      # Database configuration
+      - HOST=postgres
+      - PORT=5432
+      - USER=${DB_USER:-odoo}
+      - PASSWORD=${DB_PASSWORD:-odoo}
+
+      # Odoo configuration
+      - ODOO_BASE_URL=${ODOO_BASE_URL:-https://erp.yourdomain.com}
+      - PROXY_MODE=True
+      - LIST_DB=False
+      - WITHOUT_DEMO=all
+
+      # Security
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+
+    volumes:
+      # Odoo configuration
+      - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
+
+      # Custom addons (ipai_branding_cleaner, etc.)
+      - ../addons:/mnt/extra-addons
+
+      # OCA addons (mount your OCA repos here)
+      - ./oca-addons:/mnt/oca-addons
+
+      # Odoo data (filestore)
+      - odoo-web-data:/var/lib/odoo
+
+      # Logs
+      - ./logs:/var/log/odoo
+
+    networks:
+      - odoo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8069/web/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    command: ["odoo", "--config=/etc/odoo/odoo.conf"]
+
+  # Optional: Nginx reverse proxy with SSL
+  # Uncomment if you want to run nginx in the same stack
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: ipai_odoo_nginx
+  #   depends_on:
+  #     - odoo
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   networks:
+  #     - odoo-network
+  #   restart: unless-stopped
+
+networks:
+  odoo-network:
+    driver: bridge
+
+volumes:
+  odoo-db-data:
+    driver: local
+  odoo-web-data:
+    driver: local

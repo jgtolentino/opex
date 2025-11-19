@@ -11,20 +11,40 @@ Format loosely follows [Keep a Changelog] concepts:
 ## [Unreleased]
 
 ### Added
-- Planned:
-  - Design system tokens, themes, and shared components (Phase 2).
-  - Application scaffolding: OpEx Portal, Data Lab UI, Docs Site (Phase 3).
-  - MCP server configurations and agent playbooks (Phase 4).
-  - Full CI/CD automation and health monitoring (Phase 5).
+- **Odoo CE+OCA 18.0 White-Label Setup (Phase 2 - Platform Core):**
+  - Complete Docker Compose stack with OCB (OCA Community Backports) 18.0
+  - Production-ready `odoo.conf` with security hardening and performance tuning
+  - Environment template (`.env.template`) with secure defaults
+  - Enhanced `ipai_branding_cleaner` module:
+    - System parameters for domain binding (`web.base.url`, `web.base.url.freeze`)
+    - QWeb template overrides (`webclient_cleanup.xml`, `settings_cleanup.xml`)
+    - Scheduled action disabling (IAP, update notifications, publisher warranty)
+    - Multi-layer isolation: parameters → templates → JavaScript → SCSS
+  - Helper scripts:
+    - `setup-oca-repos.sh` – Automated OCA repository cloning
+    - `disable-iap.sh` – IAP module and account disabling
+    - `verify-isolation.sh` – Comprehensive isolation verification
+  - Documentation:
+    - `DEPLOYMENT.md` – Complete 3-layer deployment guide
+    - `QUICK_START.md` – 15-minute setup guide
+    - Reverse proxy configurations (Nginx + Caddy)
+    - Network-level blocking examples
 
 ### Changed
-- N/A yet (use this section when modifying existing behaviour).
+- Updated `ipai_branding_cleaner/__manifest__.py` to include data files and view overrides
+- Enhanced module description to reflect multi-layer isolation approach
+
+### Planned
+- Design system tokens, themes, and shared components (Phase 2 continuation).
+- Application scaffolding: OpEx Portal, Data Lab UI, Docs Site (Phase 3).
+- MCP server configurations and agent playbooks (Phase 4).
+- Full CI/CD automation and health monitoring (Phase 5).
 
 ### Fixed
-- N/A yet.
+- N/A.
 
 ### Removed
-- N/A yet.
+- N/A.
 
 ---
 

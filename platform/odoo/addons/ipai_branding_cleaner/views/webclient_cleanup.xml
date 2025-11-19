@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--
+        WebClient View Overrides
+
+        These view inheritance rules remove or replace Odoo branding at the template level.
+        This complements the JavaScript/SCSS approach for maximum coverage.
+    -->
+
+    <!-- Remove "Powered by Odoo" from webclient bootstrap -->
+    <template id="webclient_bootstrap_clean" inherit_id="web.webclient_bootstrap" name="Remove Odoo Branding">
+        <!-- Remove any odoo.com references in meta tags -->
+        <xpath expr="//meta[@name='author']" position="replace">
+            <meta name="author" content="InsightPulseAI"/>
+        </xpath>
+
+        <!-- Clean up any odoo.com links in the base template -->
+        <xpath expr="//a[@href='https://www.odoo.com']" position="replace"/>
+    </template>
+
+    <!-- Clean up the main menu/navbar -->
+    <template id="navbar_clean" inherit_id="web.menu" name="Clean Navbar Links">
+        <!-- Remove "Odoo.com" links from the app switcher if present -->
+        <xpath expr="//a[contains(@href, 'odoo.com')]" position="replace"/>
+    </template>
+
+    <!-- Remove Enterprise/IAP banners from the backend -->
+    <template id="assets_backend_clean" inherit_id="web.assets_backend" name="Remove IAP Banners">
+        <!-- This is handled by our JavaScript, but we can add CSS overrides here too -->
+    </template>
+
+</odoo>
