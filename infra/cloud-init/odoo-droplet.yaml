@@ -1,0 +1,120 @@
+#cloud-config
+# InsightPulse Odoo - Cloud-Init Bootstrap Script
+# Automatically configures new DigitalOcean droplets for Odoo deployment
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose-plugin
+  - git
+  - curl
+  - nginx
+  - certbot
+  - python3-certbot-nginx
+  - ufw
+  - htop
+  - vim
+
+groups:
+  - docker
+
+users:
+  - name: odoo-deploy
+    groups: docker, sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2E... # Add your SSH public key here
+
+write_files:
+  - path: /etc/systemd/system/odoo-healthcheck.service
+    content: |
+      [Unit]
+      Description=Odoo Health Check
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/curl -f http://localhost:8069/web/health || /usr/bin/systemctl restart odoo
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /etc/systemd/system/odoo-healthcheck.timer
+    content: |
+      [Unit]
+      Description=Odoo Health Check Timer
+
+      [Timer]
+      OnBootSec=5min
+      OnUnitActiveSec=5min
+
+      [Install]
+      WantedBy=timers.target
+
+runcmd:
+  # Add odoo-deploy user to docker group
+  - usermod -aG docker odoo-deploy
+
+  # Create deployment directory
+  - mkdir -p /opt/odoo
+  - chown odoo-deploy:odoo-deploy /opt/odoo
+
+  # Clone Odoo repository (update with your repo URL)
+  - cd /opt/odoo
+  # Note: For production, use a deploy key instead of personal credentials
+  # - sudo -u odoo-deploy git clone https://github.com/jgtolentino/odoo-ce.git .
+
+  # Configure firewall
+  - ufw --force enable
+  - ufw allow 22/tcp    # SSH
+  - ufw allow 80/tcp    # HTTP
+  - ufw allow 443/tcp   # HTTPS
+  - ufw allow 8069/tcp  # Odoo (temporary, will be proxied through NGINX)
+
+  # Start and enable Docker
+  - systemctl enable docker
+  - systemctl start docker
+
+  # Enable health check timer
+  - systemctl enable odoo-healthcheck.timer
+  - systemctl start odoo-healthcheck.timer
+
+  # Create backup directory
+  - mkdir -p /opt/odoo/backups
+  - chown odoo-deploy:odoo-deploy /opt/odoo/backups
+
+  # Set up daily backup cron
+  - |
+    cat > /etc/cron.daily/odoo-backup <<'EOF'
+    #!/bin/bash
+    cd /opt/odoo && ./platform/odoo/scripts/backup_db.sh
+    EOF
+  - chmod +x /etc/cron.daily/odoo-backup
+
+  # Log completion
+  - echo "Cloud-init bootstrap complete" > /var/log/cloud-init-complete.log
+
+final_message: |
+  ========================================
+  InsightPulse Odoo Droplet Ready
+  ========================================
+
+  The system has been configured with:
+  - Docker and Docker Compose
+  - Git
+  - NGINX
+  - Certbot (for SSL)
+  - UFW firewall
+  - Odoo deploy user
+
+  Next steps:
+  1. SSH into the droplet as odoo-deploy user
+  2. Clone the odoo-ce repository to /opt/odoo
+  3. Configure environment variables
+  4. Run deployment script
+
+  ========================================

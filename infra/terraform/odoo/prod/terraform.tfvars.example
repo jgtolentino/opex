@@ -1,0 +1,46 @@
+# InsightPulse Odoo - Production Terraform Variables
+# Copy this file to terraform.tfvars and fill in actual values
+# NEVER commit terraform.tfvars with real credentials
+# Store terraform.tfvars in a secure secrets manager
+
+# DigitalOcean API token
+# Get from: https://cloud.digitalocean.com/account/api/tokens
+# Use a token with limited scope (read/write for compute only)
+do_token = "dop_v1_..."
+
+# SSH key IDs
+# Get with: doctl compute ssh-key list
+ssh_key_ids = [12345678]
+
+# IMPORTANT: Restrict SSH access to known IPs only
+# Get your office IP: curl ifconfig.me
+ssh_source_ips = [
+  "203.0.113.0/24"  # Office network CIDR
+]
+
+# DigitalOcean region (choose closest to users)
+region = "sgp1"
+
+# Droplet size (production requires more resources)
+# Options: s-2vcpu-4gb, s-4vcpu-8gb, s-6vcpu-16gb
+droplet_size = "s-4vcpu-8gb"
+
+# Database volume
+create_volume   = true
+volume_size_gb  = 200  # Adjust based on expected data size
+
+# DNS configuration
+create_dns_record = true
+domain_name       = "insightpulseai.net"
+subdomain         = "erp"
+
+# Backups (HIGHLY recommended for production)
+enable_backups = true
+
+# Project ID (for organization in DO dashboard)
+# Get with: doctl projects list
+project_id = ""
+
+# Load balancer (for HA, optional)
+create_load_balancer = false
+ssl_certificate_name = ""  # If using DO load balancer with SSL

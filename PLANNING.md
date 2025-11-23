@@ -247,6 +247,55 @@ Unify agents, design system, docs, and automations into a single, production-gra
 - **M5:** Automation + health monitoring in place.
 - **M6:** Docs and runbooks reflect reality; system is auditable and boring.
 - **M7:** WHT Platform operational; SaaS cloning capability proven with 3+ templates.
+- **M8:** Odoo deployment infrastructure automated; staging/production environments managed via IaC and CI/CD.
+
+---
+
+### Phase 8 – Odoo Deployment Infrastructure & Automation
+
+**Goal:** Transform manual Odoo deployment into production-grade automated system.
+
+**Scope:**
+- **Docker Infrastructure:**
+  - Production-ready `Dockerfile` with IPAI addons baked in
+  - Base, staging, and production Docker Compose configurations
+  - NGINX reverse proxy configuration with SSL
+  - Health checks and resource limits
+
+- **Deployment Scripts:**
+  - `deploy.sh` - Automated deployment orchestration
+  - `install_modules.sh` - Batch module installation/upgrade
+  - `backup_db.sh` - Automated database backups with rotation
+  - `restore_db.sh` - Database restore procedures
+
+- **Infrastructure as Code (Terraform):**
+  - Reusable Terraform module for Odoo droplets
+  - Staging environment configuration
+  - Production environment configuration
+  - Cloud-init bootstrap automation
+  - Firewall rules and volume management
+
+- **CI/CD Pipelines (GitHub Actions):**
+  - Build Docker images on code changes
+  - Automated deployment to staging on develop branch
+  - Manual promotion to production with validation
+  - Module testing and linting
+  - Security scanning
+
+- **Documentation:**
+  - Current deployment state assessment
+  - Complete deployment runbook
+  - Terraform usage guide
+  - Disaster recovery procedures
+
+**Depends on:** Phase 2 (Platform Core - Odoo).
+
+**Deliverables:**
+- Reproducible infrastructure deployment via Terraform
+- Automated staging deployments on code push
+- Safe production deployment with rollback capability
+- Comprehensive deployment documentation
+- Database backup/restore automation
 
 ---
 

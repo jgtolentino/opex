@@ -1,0 +1,98 @@
+name: Deploy Odoo to Staging
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'platform/odoo/**'
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy (e.g., staging-abc1234)'
+        required: false
+        default: 'staging-latest'
+
+env:
+  REGISTRY: registry.digitalocean.com/ipai
+  IMAGE_NAME: odoo-ce
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: http://${{ secrets.STAGING_DROPLET_IP }}:8069
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            echo "tag=staging-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.STAGING_DROPLET_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to staging droplet
+        env:
+          DROPLET_IP: ${{ secrets.STAGING_DROPLET_IP }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'ENDSSH'
+            set -e
+
+            # Navigate to deployment directory
+            cd /opt/odoo
+
+            # Pull latest code
+            git fetch origin
+            git checkout develop
+            git pull origin develop
+
+            # Set environment variables
+            export ODOO_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+            export COMPOSE_PROJECT_NAME=odoo-staging
+
+            # Navigate to docker directory
+            cd platform/odoo
+
+            # Pull latest image
+            docker compose -f docker/docker-compose.base.yml -f docker/docker-compose.staging.yml pull
+
+            # Run deployment script
+            ./scripts/deploy.sh staging
+
+            # Check health
+            sleep 10
+            curl -f http://localhost:8069/web/health || echo "Warning: Health check failed"
+          ENDSSH
+
+      - name: Verify deployment
+        run: |
+          sleep 5
+          curl -f http://${{ secrets.STAGING_DROPLET_IP }}:8069/web/health || exit 1
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Staging deployment successful!"
+          echo "URL: http://${{ secrets.STAGING_DROPLET_IP }}:8069"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Staging deployment failed!"
+          echo "Check logs: ssh root@${{ secrets.STAGING_DROPLET_IP }} 'docker compose -f /opt/odoo/platform/odoo/docker/docker-compose.base.yml -f /opt/odoo/platform/odoo/docker/docker-compose.staging.yml logs'"

@@ -10,21 +10,150 @@ Format loosely follows [Keep a Changelog] concepts:
 
 ## [Unreleased]
 
-### Added
-- Planned:
-  - Design system tokens, themes, and shared components (Phase 2).
-  - Application scaffolding: OpEx Portal, Data Lab UI, Docs Site (Phase 3).
-  - MCP server configurations and agent playbooks (Phase 4).
-  - Full CI/CD automation and health monitoring (Phase 5).
+### Added - Odoo Deployment Infrastructure (Phase 8)
+
+#### Documentation
+- **Deployment State Documentation** (`docs/deployment/ODOO_DEPLOYMENT_STATE.md`)
+  - Comprehensive assessment of current DigitalOcean deployment
+  - Gap analysis and upgrade roadmap
+  - Deployment runbook and troubleshooting guide
+  - Disaster recovery procedures
+
+#### Docker Infrastructure
+- **Production Dockerfile** (`platform/odoo/docker/odoo.Dockerfile`)
+  - Based on official Odoo 18 image
+  - IPAI custom addons baked into image
+  - Python dependencies for OCR, PDF processing, and integrations
+  - Health check configuration
+
+- **Docker Compose Configurations:**
+  - `docker-compose.base.yml` - Shared service definitions
+  - `docker-compose.staging.yml` - Staging environment overrides
+  - `docker-compose.prod.yml` - Production environment with resource limits
+  - `.env.example` - Environment variable template
+
+- **NGINX Configuration** (`platform/odoo/docker/nginx/odoo.conf`)
+  - Reverse proxy for Odoo
+  - WebSocket support for longpolling
+  - SSL/TLS configuration
+  - Rate limiting and security headers
+  - Static file caching
+
+#### Deployment Scripts
+- **`deploy.sh`** - Main deployment orchestration script
+  - Pull latest images
+  - Database backup (production only)
+  - Service restart with health checks
+  - Environment-specific configurations
+
+- **`install_modules.sh`** - Module installation automation
+  - Batch install/upgrade of IPAI modules
+  - Rollback capability
+  - Health verification
+
+- **`backup_db.sh`** - Database backup automation
+  - Compressed PostgreSQL dumps
+  - Automatic rotation (30-day retention)
+  - Timestamp-based naming
+
+- **`restore_db.sh`** - Database restore procedure
+  - Safe restore with confirmations
+  - Pre-restore Odoo shutdown
+  - Post-restore health checks
+
+#### Infrastructure as Code (Terraform)
+- **Reusable Module** (`infra/terraform/odoo/modules/droplet-odoo/`)
+  - Parameterized droplet creation
+  - Firewall configuration
+  - Volume management
+  - DNS record creation
+  - DigitalOcean project integration
+
+- **Staging Environment** (`infra/terraform/odoo/staging/`)
+  - 2 vCPU, 4GB RAM droplet
+  - Development mode enabled
+  - Direct Odoo access for testing
+
+- **Production Environment** (`infra/terraform/odoo/prod/`)
+  - 4 vCPU, 8GB RAM droplet
+  - Separate data volume (200GB)
+  - Automated backups enabled
+  - Restrictive firewall rules
+  - Resource limits enforced
+
+- **Cloud-Init Bootstrap** (`infra/cloud-init/odoo-droplet.yaml`)
+  - Automated droplet configuration
+  - Docker and Docker Compose installation
+  - NGINX and Certbot setup
+  - UFW firewall configuration
+  - Health check timer
+  - Daily backup cron job
+
+- **Terraform Documentation** (`infra/terraform/odoo/README.md`)
+  - Complete setup guide
+  - Deployment procedures
+  - Post-deployment steps
+  - Troubleshooting guide
+  - Security best practices
+
+#### CI/CD Workflows (GitHub Actions)
+- **`build-odoo-image.yml`** - Docker image build pipeline
+  - Triggered on changes to `platform/odoo/**`
+  - Multi-tag strategy (SHA, environment, timestamp)
+  - Push to DigitalOcean Container Registry
+  - Layer caching for faster builds
+
+- **`deploy-odoo-staging.yml`** - Staging deployment automation
+  - Auto-deploy on push to develop branch
+  - SSH-based deployment
+  - Health verification
+  - Deployment notifications
+
+- **`deploy-odoo-prod.yml`** - Production deployment workflow
+  - Manual trigger with image tag input
+  - Pre-deployment backup
+  - Image promotion from staging
+  - Rollback instructions on failure
+  - Health checks and verification
+
+- **`test-odoo-modules.yml`** - Module quality checks
+  - Python linting (flake8, black, isort)
+  - Manifest validation
+  - Module structure verification
+  - Security scanning (bandit)
+
+#### Repository Organization
+- Created `platform/odoo/docker/` for Docker configurations
+- Created `platform/odoo/scripts/` for deployment automation
+- Created `infra/terraform/odoo/` for infrastructure as code
+- Created `infra/cloud-init/` for droplet bootstrap configs
+- Created `docs/deployment/` for deployment documentation
+
+### Added - Planned Future Work
+- Design system tokens, themes, and shared components (Phase 2).
+- Application scaffolding: OpEx Portal, Data Lab UI, Docs Site (Phase 3).
+- MCP server configurations and agent playbooks (Phase 4).
+- Full CI/CD automation and health monitoring (Phase 5).
 
 ### Changed
-- N/A yet (use this section when modifying existing behaviour).
+- Updated `PLANNING.md` with Phase 8 (Odoo Deployment Infrastructure)
+- Updated milestone M8 for deployment automation
+- Updated `TASKS.md` section H (Infra & Environments) with completed items
 
 ### Fixed
 - N/A yet.
 
 ### Removed
 - N/A yet.
+
+### Infrastructure
+- All deployment infrastructure files are version-controlled
+- Secrets and credentials use example templates (`.example` files)
+- Production-ready configurations with security best practices
+- Comprehensive documentation for operations team
+
+### Breaking Changes
+- None (new infrastructure, no existing dependencies)
 
 ---
 

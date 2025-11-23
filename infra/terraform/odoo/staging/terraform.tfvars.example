@@ -1,0 +1,32 @@
+# InsightPulse Odoo - Staging Terraform Variables
+# Copy this file to terraform.tfvars and fill in actual values
+# NEVER commit terraform.tfvars with real credentials
+
+# DigitalOcean API token
+# Get from: https://cloud.digitalocean.com/account/api/tokens
+do_token = "dop_v1_..."
+
+# SSH key IDs
+# Get with: doctl compute ssh-key list
+ssh_key_ids = [12345678, 87654321]
+
+# Restrict SSH access to your IPs (recommended)
+# Get your IP: curl ifconfig.me
+ssh_source_ips = [
+  "203.0.113.0/24",  # Your office network
+  "198.51.100.42/32" # Your home IP
+]
+
+# DigitalOcean region
+region = "sgp1"
+
+# Droplet size (staging uses smaller instance)
+droplet_size = "s-2vcpu-4gb"
+
+# DNS configuration (optional)
+create_dns_record = false
+domain_name       = "insightpulseai.net"
+
+# Project ID (optional, for organization)
+# Get with: doctl projects list
+project_id = ""
