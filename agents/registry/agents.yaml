@@ -116,7 +116,33 @@ agents:
       - leadership
       - platform
 
+  - id: odoo-oca-ci-fixer
+    name: Odoo CE/OCA CI Guardian
+    description: Audits and fixes GitHub Actions for Odoo 18 CE and OCA-style repositories, enforcing OCA conventions and preventing Enterprise contamination
+    version: 1.0.0
+    status: active
+    primary_tools:
+      - github-actions
+      - python-development
+      - odoo-testing
+    skills:
+      - workflow-generation
+      - enterprise-detection
+      - oca-compliance
+      - openupgrade-validation
+    mcp_servers:
+      - github-api
+    routing_tags:
+      - odoo
+      - ci-cd
+      - oca
+      - quality-assurance
+      - automation
+    config_files:
+      - agents/odoo/odoo_oca_ci_fixer.yaml
+      - prompts/odoo_oca_ci_fixer_system.txt
+
 metadata:
-  last_updated: "2025-11-18"
+  last_updated: "2025-11-23"
   schema_version: "1.0"
-  total_agents: 6
+  total_agents: 7
