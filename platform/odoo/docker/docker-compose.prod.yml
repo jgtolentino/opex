@@ -1,0 +1,71 @@
+# InsightPulse Odoo - Production Environment
+# Run with: docker compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
+
+version: "3.8"
+
+services:
+  odoo:
+    container_name: odoo-prod
+    hostname: odoo-prod
+    image: ${ODOO_IMAGE:-registry.digitalocean.com/ipai/odoo-ce:prod-latest}
+    environment:
+      - DB_NAME=odoo
+      - ENV=production
+      # Production optimizations
+      - WORKERS=4
+      - MAX_CRON_THREADS=2
+      - DB_MAXCONN=64
+      # Security
+      - LIMIT_MEMORY_HARD=2684354560  # 2.5GB
+      - LIMIT_MEMORY_SOFT=2147483648  # 2GB
+      - LIMIT_REQUEST=8192
+      - LIMIT_TIME_CPU=600
+      - LIMIT_TIME_REAL=1200
+    ports:
+      - "127.0.0.1:8069:8069"  # Only bind to localhost (NGINX proxy handles external)
+      - "127.0.0.1:8072:8072"  # Longpolling
+    labels:
+      - "com.insightpulse.environment=production"
+      - "com.insightpulse.project=odoo"
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  db:
+    container_name: odoo-db-prod
+    hostname: odoo-db-prod
+    environment:
+      - POSTGRES_DB=odoo
+    labels:
+      - "com.insightpulse.environment=production"
+      - "com.insightpulse.project=odoo"
+    # PostgreSQL performance tuning
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - max_connections=100
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - work_mem=8MB
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G

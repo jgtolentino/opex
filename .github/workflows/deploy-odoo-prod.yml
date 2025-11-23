@@ -1,0 +1,194 @@
+name: Deploy Odoo to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy (must be a staging image, e.g., staging-abc1234)'
+        required: true
+      run_migrations:
+        description: 'Run database migrations'
+        type: boolean
+        default: false
+      backup_before_deploy:
+        description: 'Create database backup before deployment'
+        type: boolean
+        default: true
+
+env:
+  REGISTRY: registry.digitalocean.com/ipai
+  IMAGE_NAME: odoo-ce
+
+jobs:
+  validate-deployment:
+    name: Validate Deployment Request
+    runs-on: ubuntu-latest
+    outputs:
+      prod_tag: ${{ steps.validate.outputs.prod_tag }}
+
+    steps:
+      - name: Validate image tag
+        id: validate
+        run: |
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+
+          # Ensure tag is a staging tag (not a random tag)
+          if [[ ! "$IMAGE_TAG" =~ ^staging- ]]; then
+            echo "❌ Error: Can only promote staging images to production"
+            echo "Provided tag: $IMAGE_TAG"
+            echo "Tag must start with 'staging-'"
+            exit 1
+          fi
+
+          # Create production tag
+          PROD_TAG="${IMAGE_TAG/staging-/prod-}"
+          echo "prod_tag=${PROD_TAG}" >> $GITHUB_OUTPUT
+          echo "✅ Validated: $IMAGE_TAG will be promoted to $PROD_TAG"
+
+  deploy-production:
+    name: Deploy to Production
+    needs: validate-deployment
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://erp.insightpulseai.net
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to DigitalOcean Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.DOCR_TOKEN }}
+          password: ${{ secrets.DOCR_TOKEN }}
+
+      - name: Promote staging image to production
+        env:
+          STAGING_TAG: ${{ github.event.inputs.image_tag }}
+          PROD_TAG: ${{ needs.validate-deployment.outputs.prod_tag }}
+        run: |
+          # Pull staging image
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${STAGING_TAG}
+
+          # Retag as production
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${STAGING_TAG} \
+                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${PROD_TAG}
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${STAGING_TAG} \
+                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod-latest
+
+          # Push production tags
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${PROD_TAG}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod-latest
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.PROD_DROPLET_IP }} >> ~/.ssh/known_hosts
+
+      - name: Create pre-deployment backup
+        if: github.event.inputs.backup_before_deploy == 'true'
+        env:
+          DROPLET_IP: ${{ secrets.PROD_DROPLET_IP }}
+        run: |
+          echo "📦 Creating database backup..."
+          ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'ENDSSH'
+            cd /opt/odoo/platform/odoo
+            ./scripts/backup_db.sh
+          ENDSSH
+          echo "✅ Backup created"
+
+      - name: Deploy to production droplet
+        env:
+          DROPLET_IP: ${{ secrets.PROD_DROPLET_IP }}
+          IMAGE_TAG: ${{ needs.validate-deployment.outputs.prod_tag }}
+          RUN_MIGRATIONS: ${{ github.event.inputs.run_migrations }}
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'ENDSSH'
+            set -e
+
+            echo "🚀 Starting production deployment..."
+
+            # Navigate to deployment directory
+            cd /opt/odoo
+
+            # Pull latest code (main branch for production)
+            git fetch origin
+            git checkout main
+            git pull origin main
+
+            # Set environment variables
+            export ODOO_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+            export COMPOSE_PROJECT_NAME=odoo-prod
+
+            # Navigate to docker directory
+            cd platform/odoo
+
+            # Pull latest image
+            echo "📦 Pulling Docker image..."
+            docker compose -f docker/docker-compose.base.yml -f docker/docker-compose.prod.yml pull
+
+            # Run deployment script
+            echo "🔄 Running deployment..."
+            ./scripts/deploy.sh prod
+
+            # Wait for Odoo to be ready
+            echo "⏳ Waiting for Odoo to be ready..."
+            sleep 15
+
+            # Health check
+            if docker compose -f docker/docker-compose.base.yml -f docker/docker-compose.prod.yml exec -T odoo curl -f http://localhost:8069/web/health; then
+              echo "✅ Odoo is healthy"
+            else
+              echo "❌ Odoo health check failed"
+              echo "Checking logs..."
+              docker compose -f docker/docker-compose.base.yml -f docker/docker-compose.prod.yml logs --tail=50 odoo
+              exit 1
+            fi
+          ENDSSH
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying production deployment..."
+          sleep 5
+
+          # Check health endpoint
+          if curl -f https://erp.insightpulseai.net/web/health; then
+            echo "✅ Production health check passed"
+          else
+            echo "❌ Production health check failed"
+            exit 1
+          fi
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Production deployment successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Deployed image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate-deployment.outputs.prod_tag }}"
+          echo "Production URL: https://erp.insightpulseai.net"
+          echo ""
+          echo "Promoted from staging: ${{ github.event.inputs.image_tag }}"
+          echo ""
+
+      - name: Rollback instructions
+        if: failure()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "❌ Production deployment failed!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "To rollback, SSH into production and run:"
+          echo "  ssh root@${{ secrets.PROD_DROPLET_IP }}"
+          echo "  cd /opt/odoo/platform/odoo"
+          echo "  # Restore from backup if needed:"
+          echo "  ./scripts/restore_db.sh backups/<backup_file>"
+          echo "  # Or revert to previous image and restart:"
+          echo "  export ODOO_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod-<previous-sha>"
+          echo "  docker compose -f docker/docker-compose.base.yml -f docker/docker-compose.prod.yml up -d"
+          echo ""

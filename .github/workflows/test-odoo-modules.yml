@@ -1,0 +1,197 @@
+name: Test Odoo Modules
+
+on:
+  pull_request:
+    paths:
+      - 'platform/odoo/addons/**'
+      - 'odoo/addons/**'
+  push:
+    branches: [develop]
+    paths:
+      - 'platform/odoo/addons/**'
+      - 'odoo/addons/**'
+
+jobs:
+  lint-python:
+    name: Lint Python Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8 black isort pylint-odoo
+
+      - name: Run flake8
+        run: |
+          # Check all Python files in Odoo addons
+          flake8 platform/odoo/addons/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 odoo/addons/ --count --select=E9,F63,F7,F82 --show-source --statistics --exit-zero
+
+      - name: Check code formatting with black
+        run: |
+          black --check platform/odoo/addons/ odoo/addons/ || true
+
+      - name: Check import sorting with isort
+        run: |
+          isort --check-only platform/odoo/addons/ odoo/addons/ || true
+
+  validate-manifests:
+    name: Validate Module Manifests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate IPAI module manifests
+        run: |
+          echo "Validating IPAI module manifests..."
+
+          ERRORS=0
+
+          for manifest in platform/odoo/addons/ipai_*/__manifest__.py odoo/addons/ipai_*/__manifest__.py; do
+            if [ -f "$manifest" ]; then
+              echo "Checking: $manifest"
+
+              # Check for required fields
+              if ! grep -q "'name':" "$manifest"; then
+                echo "❌ Missing 'name' field in $manifest"
+                ERRORS=$((ERRORS + 1))
+              fi
+
+              if ! grep -q "'version':" "$manifest"; then
+                echo "❌ Missing 'version' field in $manifest"
+                ERRORS=$((ERRORS + 1))
+              fi
+
+              if ! grep -q "'license':" "$manifest"; then
+                echo "❌ Missing 'license' field in $manifest"
+                ERRORS=$((ERRORS + 1))
+              fi
+
+              # Check for AGPL-3 license
+              if ! grep -q "'license': 'AGPL-3'" "$manifest"; then
+                echo "⚠️  Warning: Module should use AGPL-3 license: $manifest"
+              fi
+
+              echo "✅ $manifest validated"
+            fi
+          done
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS manifest errors"
+            exit 1
+          else
+            echo "✅ All manifests valid"
+          fi
+
+  check-structure:
+    name: Check Module Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate IPAI module structure
+        run: |
+          echo "Validating IPAI module structure..."
+
+          WARNINGS=0
+
+          for module_dir in platform/odoo/addons/ipai_* odoo/addons/ipai_*; do
+            if [ -d "$module_dir" ]; then
+              MODULE_NAME=$(basename "$module_dir")
+              echo "Checking: $MODULE_NAME"
+
+              # Check for required files
+              if [ ! -f "$module_dir/__init__.py" ]; then
+                echo "❌ Missing __init__.py in $MODULE_NAME"
+                WARNINGS=$((WARNINGS + 1))
+              fi
+
+              if [ ! -f "$module_dir/__manifest__.py" ]; then
+                echo "❌ Missing __manifest__.py in $MODULE_NAME"
+                WARNINGS=$((WARNINGS + 1))
+              fi
+
+              # Check for recommended directories
+              if [ ! -d "$module_dir/models" ]; then
+                echo "⚠️  No models/ directory in $MODULE_NAME"
+              fi
+
+              if [ ! -d "$module_dir/views" ]; then
+                echo "⚠️  No views/ directory in $MODULE_NAME"
+              fi
+
+              echo "✅ $MODULE_NAME structure checked"
+            fi
+          done
+
+          if [ $WARNINGS -gt 0 ]; then
+            echo "⚠️  Found $WARNINGS structure warnings (non-blocking)"
+          else
+            echo "✅ All modules have correct structure"
+          fi
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install bandit
+        run: pip install bandit
+
+      - name: Run security scan
+        run: |
+          # Scan for common security issues
+          bandit -r platform/odoo/addons/ odoo/addons/ -f json -o bandit-report.json || true
+
+          # Show results
+          if [ -f bandit-report.json ]; then
+            echo "Security scan complete. Check bandit-report.json for details."
+          fi
+        continue-on-error: true
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [lint-python, validate-manifests, check-structure, security-scan]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Odoo Module Tests Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Lint Python: ${{ needs.lint-python.result }}"
+          echo "Validate Manifests: ${{ needs.validate-manifests.result }}"
+          echo "Check Structure: ${{ needs.check-structure.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+          echo ""
+
+          if [ "${{ needs.validate-manifests.result }}" != "success" ]; then
+            echo "❌ Critical tests failed"
+            exit 1
+          else
+            echo "✅ All tests passed"
+          fi

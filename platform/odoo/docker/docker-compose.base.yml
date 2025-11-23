@@ -1,0 +1,63 @@
+# InsightPulse Odoo - Base Docker Compose Configuration
+# This file defines shared services used by staging and production
+# Do not run this file directly - use staging or prod specific compose files
+
+version: "3.8"
+
+services:
+  odoo:
+    image: ${ODOO_IMAGE:-registry.digitalocean.com/ipai/odoo-ce:latest}
+    depends_on:
+      - db
+    env_file:
+      - ../.env
+    environment:
+      # Database connection
+      - HOST=${DB_HOST:-db}
+      - PORT=${DB_PORT:-5432}
+      - USER=${DB_USER:-odoo}
+      - PASSWORD=${DB_PASSWORD}
+      # Odoo configuration
+      - ODOO_RC=/etc/odoo/odoo.conf
+    volumes:
+      # Data persistence
+      - odoo-data:/var/lib/odoo
+      # Logs
+      - odoo-logs:/var/log/odoo
+      # Custom addons (override for development only)
+      # In production, addons are baked into the image
+      # - ../addons:/mnt/ipai-addons:ro
+    restart: unless-stopped
+    networks:
+      - odoo-network
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=${DB_NAME:-odoo}
+      - POSTGRES_USER=${DB_USER:-odoo}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - odoo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-odoo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  odoo-data:
+    name: ${COMPOSE_PROJECT_NAME:-odoo}_odoo_data
+  odoo-logs:
+    name: ${COMPOSE_PROJECT_NAME:-odoo}_odoo_logs
+  db-data:
+    name: ${COMPOSE_PROJECT_NAME:-odoo}_db_data
+
+networks:
+  odoo-network:
+    name: ${COMPOSE_PROJECT_NAME:-odoo}_network
+    driver: bridge

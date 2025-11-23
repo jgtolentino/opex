@@ -1,0 +1,172 @@
+# Agent Routing Rules for Odoo CI/CD
+# Automatically routes CI-related tasks to the appropriate agent
+
+routing_rules:
+  - name: odoo-ci-guardian
+    description: Route Odoo CI/CD issues to the OCA CI Guardian agent
+    priority: high
+    agent_id: odoo-oca-ci-fixer
+
+    triggers:
+      # File path patterns that indicate Odoo CI work
+      path_patterns:
+        - "addons/**/__manifest__.py"
+        - "platform/odoo/addons/**/__manifest__.py"
+        - "odoo/addons/**/__manifest__.py"
+        - ".github/workflows/**/*.yml"
+        - "platform/odoo/**"
+        - "scripts/ci/**"
+        - "openupgrade_scripts/**"
+
+      # Conditions that must be met
+      conditions:
+        - type: file_exists
+          paths:
+            - "addons/"
+        - type: file_pattern
+          pattern: "__manifest__.py"
+        - type: keyword_present
+          keywords:
+            - "odoo"
+            - "OCA"
+            - "enterprise"
+
+      # Events that trigger routing
+      events:
+        - ci_failure
+        - workflow_update
+        - manifest_change
+        - pr_opened
+
+    # Context to provide to agent
+    context:
+      include:
+        - file_tree: true
+        - ci_logs: true
+        - recent_commits: 5
+        - pr_description: true
+
+    # Auto-invoke conditions
+    auto_invoke:
+      on_ci_failure: true
+      on_enterprise_detection: true
+      on_workflow_change: false  # Require manual approval for workflow changes
+
+    # Actions agent can take
+    permitted_actions:
+      - read_files
+      - edit_files
+      - create_pr
+      - comment_on_pr
+      - run_tests
+      - update_workflows
+
+    # Escalation rules
+    escalate_if:
+      - breaking_changes_detected
+      - security_issues_found
+      - manual_review_required
+
+  - name: odoo-deployment-review
+    description: Route deployment-related Odoo changes to combined CI Guardian + Deployment pipeline
+    priority: medium
+    agent_id: odoo-oca-ci-fixer
+
+    triggers:
+      path_patterns:
+        - "platform/odoo/docker/**"
+        - "platform/odoo/scripts/**"
+        - "infra/terraform/odoo/**"
+
+      events:
+        - dockerfile_change
+        - compose_file_change
+        - terraform_change
+        - deployment_script_change
+
+    context:
+      include:
+        - file_tree: true
+        - deployment_history: true
+        - current_environment: true
+
+    auto_invoke:
+      on_dockerfile_change: true
+      on_security_update: true
+
+    permitted_actions:
+      - validate_dockerfile
+      - test_compose
+      - dry_run_terraform
+
+  - name: oca-compliance-check
+    description: Ensure all Odoo module changes comply with OCA standards
+    priority: high
+    agent_id: odoo-oca-ci-fixer
+
+    triggers:
+      path_patterns:
+        - "**/__manifest__.py"
+        - "**/models/*.py"
+        - "**/views/*.xml"
+        - "**/security/*.csv"
+
+      events:
+        - pr_opened
+        - commit_pushed
+
+      conditions:
+        - type: file_contains
+          pattern: "license.*AGPL"
+        - type: directory_structure
+          required:
+            - models/
+            - views/
+            - __manifest__.py
+
+    context:
+      include:
+        - changed_files: true
+        - oca_guidelines: true
+
+    auto_invoke:
+      on_manifest_change: true
+      on_license_change: true
+
+    validation_checks:
+      - enterprise_contamination
+      - agpl_compliance
+      - oca_structure
+      - manifest_completeness
+
+routing_metadata:
+  version: "1.0.0"
+  last_updated: "2025-11-23"
+  owner: "InsightPulse Platform Team"
+  documentation: "agents/odoo/README.md"
+
+# Integration with MCP
+mcp_integration:
+  servers:
+    - name: github-api
+      endpoints:
+        - workflows
+        - pull-requests
+        - issues
+    - name: odoo-backend
+      endpoints:
+        - module-validation
+        - test-execution
+
+# Notification settings
+notifications:
+  on_agent_invocation:
+    - type: mattermost
+      channel: "#odoo-ci"
+      mention: "@devops"
+  on_fix_applied:
+    - type: github_comment
+      include_summary: true
+  on_escalation:
+    - type: email
+      recipients: ["devops@insightpulseai.net"]

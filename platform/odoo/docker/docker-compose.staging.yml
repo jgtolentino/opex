@@ -1,0 +1,30 @@
+# InsightPulse Odoo - Staging Environment
+# Run with: docker compose -f docker-compose.base.yml -f docker-compose.staging.yml up -d
+
+version: "3.8"
+
+services:
+  odoo:
+    container_name: odoo-staging
+    hostname: odoo-staging
+    image: ${ODOO_IMAGE:-registry.digitalocean.com/ipai/odoo-ce:staging-latest}
+    environment:
+      - DB_NAME=staging
+      - ENV=staging
+      # Enable development mode features
+      - ODOO_DEV_MODE=True
+    ports:
+      - "8069:8069"
+      - "8072:8072"  # Longpolling
+    labels:
+      - "com.insightpulse.environment=staging"
+      - "com.insightpulse.project=odoo"
+
+  db:
+    container_name: odoo-db-staging
+    hostname: odoo-db-staging
+    environment:
+      - POSTGRES_DB=staging
+    labels:
+      - "com.insightpulse.environment=staging"
+      - "com.insightpulse.project=odoo"
